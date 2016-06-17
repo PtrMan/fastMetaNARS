@@ -4,6 +4,7 @@
 #include <cstring>
 
 #include "Bloomfilter.h"
+#include "TermId.h"
 
 /**
 * A stamp like in the classic NARS which contains the stamp history (as TermIdType values) and a bloomfilter for the values
@@ -14,11 +15,11 @@ struct DualStamp {
 		used = 0;
 	}
 
-	void insertAtFront(vector<TermIdType> termIds) {
+	void insertAtFront(vector<TermId> termIds) {
 		size_t newUsed = min(used + termIds.size(), termIdHistory.size());
 
 		// push the old values to the back
-		memmove(&termIdHistory[termIds.size()], &termIdHistory, (termIdHistory.size() - termIds.size()) * sizeof(TermIdType));
+		memmove(&termIdHistory[termIds.size()], &termIdHistory, (termIdHistory.size() - termIds.size()) * sizeof(TermId::TermIdType));
 
 		for (size_t i = 0; i < termIds.size(); i++) {
 			termIdHistory[i] = termIds[i];
@@ -34,8 +35,8 @@ struct DualStamp {
 	}
 
 	size_t used;
-	array<TermIdType, NumberOfElements> termIdHistory;
-	Bloomfilter<BloofilterNumberOfBits, TermIdType> bloomfilter;
+	array<TermId, NumberOfElements> termIdHistory;
+	Bloomfilter<BloofilterNumberOfBits, TermId::TermIdType> bloomfilter;
 protected:
 	void recalcBloomfilter(size_t newSize) {
 		bloomfilter.reset();
@@ -45,7 +46,7 @@ protected:
 		}
 	}
 
-	void addToBloomfilter(vector<TermIdType> termIds) {
+	void addToBloomfilter(vector<TermId> termIds) {
 		for (size_t i = 0; i < termIds.size(); i++) {
 			bloomfilter.set(termIds[i]);
 		}
