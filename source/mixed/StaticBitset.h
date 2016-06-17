@@ -33,15 +33,15 @@ struct StaticBitset {
 	}
 
 
-	bool get(size_t bitIndex) {
-		size_t arrayIndex = bitIndex / NUMBEROFBITSFORMACHINEWORD;
-		size_t bitIndex = bitIndex % NUMBEROFBITSFORMACHINEWORD;
+	bool get(size_t bitIndexParameter) {
+		size_t arrayIndex = bitIndexParameter / NUMBEROFBITSFORMACHINEWORD;
+		size_t bitIndex = bitIndexParameter % NUMBEROFBITSFORMACHINEWORD;
 		return array[arrayIndex] & (1 << bitIndex);
 	}
 
-	void set(size_t bitIndex, bool value) {
-		size_t arrayIndex = bitIndex / NUMBEROFBITSFORMACHINEWORD;
-		size_t bitIndexInWord = bitIndex % NUMBEROFBITSFORMACHINEWORD;
+	void set(size_t bitIndexParameter, bool value) {
+		size_t arrayIndex = bitIndexParameter / NUMBEROFBITSFORMACHINEWORD;
+		size_t bitIndexInWord = bitIndexParameter % NUMBEROFBITSFORMACHINEWORD;
 
 		size_t negationMask = ~(1 << bitIndexInWord);
 
@@ -57,4 +57,3 @@ struct StaticBitset {
 
 	size_t array[NumberOfBits / (NUMBEROFBITSFORMACHINEWORD)+1]; // TODO< remove +1 if modulo is zero >
 };
-
