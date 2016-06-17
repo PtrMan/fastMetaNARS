@@ -32,6 +32,7 @@ SET(HEADERS
   source/mixed/UnifiedTerm.h
   source/mixed/UnifiedTermIndex.h
   source/mixed/Inference.h
+  source/mixed/PathDescriptor.h
 
   source/mixed/autogen/Deriver.h
 )
