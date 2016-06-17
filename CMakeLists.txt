@@ -7,6 +7,7 @@ SET(SOURCE
   source/mixed/Murmur.cpp
   source/mixed/ReasonerInstance.cpp
   source/mixed/UnifiedTerm.cpp
+  source/mixed/Inference.cpp
 
   source/mixed/autogen/Deriver.cpp
 )
@@ -30,6 +31,7 @@ SET(HEADERS
   source/mixed/TypedefsAndDefines.h
   source/mixed/UnifiedTerm.h
   source/mixed/UnifiedTermIndex.h
+  source/mixed/Inference.h
 
   source/mixed/autogen/Deriver.h
 )
