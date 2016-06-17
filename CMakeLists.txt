@@ -8,6 +8,7 @@ SET(SOURCE
   source/mixed/ReasonerInstance.cpp
   source/mixed/UnifiedTerm.cpp
   source/mixed/Inference.cpp
+  source/mixed/PathWalker.cpp
 
   source/mixed/autogen/Deriver.cpp
 )
@@ -34,6 +35,7 @@ SET(HEADERS
   source/mixed/Inference.h
   source/mixed/PathDescriptor.h
   source/mixed/Path.h
+  source/mixed/PathWalker.h
 
   source/mixed/autogen/Deriver.h
 )
