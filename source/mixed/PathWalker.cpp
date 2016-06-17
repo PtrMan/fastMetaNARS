@@ -6,6 +6,9 @@ vector<UnifiedTermIndex> PathWalker::walk(const ReasonerInstance &reasonerInstan
 	UnifiedTermIndex currentTermIndex = entry;
 
 	for (const PathDescriptor &currentDescriptor : path.descriptors) {
+		// ASK< do we have to push this or the next? >
+		walkedPath.push_back(currentTermIndex);
+		
 		const UnifiedTerm currentNodeTerm = reasonerInstance.accessTermByIndex(currentTermIndex);
 
 		UnifiedTermIndex nextTermIndex;
@@ -21,9 +24,6 @@ vector<UnifiedTermIndex> PathWalker::walk(const ReasonerInstance &reasonerInstan
 			
 			default: // TODO< throw something >
 		}
-
-		// ASK< do we have to push this or the next? >
-		walkedPath.push_back(nextTermIndex);
 
 		currentTermIndex = nextTermIndex;
 	}
