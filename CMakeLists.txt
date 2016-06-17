@@ -33,6 +33,7 @@ SET(HEADERS
   source/mixed/UnifiedTerm.h
   source/mixed/UnifiedTermIndex.h
   source/mixed/Inference.h
+  source/mixed/InferenceFuture.h
   source/mixed/PathDescriptor.h
   source/mixed/Path.h
   source/mixed/PathWalker.h
