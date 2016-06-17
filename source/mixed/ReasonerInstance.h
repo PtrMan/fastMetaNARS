@@ -27,6 +27,11 @@ struct ReasonerInstance {
 	Bag<shared_ptr<ClassicalConcept>> concepts;
 	
 	// OPTIMISATION< for inlining in header >
+	const UnifiedTerm &accessTermByIndex(UnifiedTermIndex &index) const {
+		return unifiedTerms[index.value];
+	}
+
+	// OPTIMISATION< for inlining in header >
 	UnifiedTerm &accessTermByIndex(UnifiedTermIndex &index) {
 		return unifiedTerms[index.value];
 	}
