@@ -24,5 +24,5 @@ void UnifiedTerm::updateHash(ReasonerInstance &reasonerInstance) {
 	hashVector[2] = static_cast<decltype(termFlags)>(reasonerInstance.accessTermByIndex(left).cachedHash);
 	hashVector[3] = static_cast<decltype(termFlags)>(reasonerInstance.accessTermByIndex(right).cachedHash);
 
-	cachedHash = murmur3_32(reinterpret_cast<char*>(hashVector.data()), hashVector.size() * sizeof(decltype(termFlags)), seed);
+	cachedHash = murmur3_32(reinterpret_cast<char*>(hashVector.data()), static_cast<uint32_t>(hashVector.size() * sizeof(decltype(termFlags))), seed);
 }

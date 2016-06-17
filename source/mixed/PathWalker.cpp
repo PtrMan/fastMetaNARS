@@ -23,6 +23,7 @@ vector<UnifiedTermIndex> PathWalker::walk(const ReasonerInstance &reasonerInstan
 			break;
 			
 			default: // TODO< throw something >
+			break;
 		}
 
 		currentTermIndex = nextTermIndex;
