@@ -1,4 +1,5 @@
 #include "Inference.h"
+#include "PathWalker.h"
 
 void Inference::sampleConceptsInParallel(vector<shared_ptr<ClassicalConcept>> &concepts, ReasonerInstance &reasonerInstance, mt19937 &gen) {
 	// TODO< parallelize this >
@@ -25,6 +26,19 @@ void Inference::inference(shared_ptr<ClassicalTask> task, shared_ptr<ClassicalBe
 	UnifiedTerm unifiedTermOfTask = reasonerInstance.accessTermByIndex(task->unifiedTerm);
 	UnifiedTerm unifiedTermOfBelief = reasonerInstance.accessTermByIndex(belief->unifiedTerm);
 
-	// TODO< TODO's and decide if we append the "before tree" to the results here >
-	vector<UnifiedTerm> derivedTerms = derive(reasonerInstance, TODO, TODO, reasonerInstance.configuration.k);
+	// walk and do inferences for all combinations of all paths of the task and belief
+	for (Path& iterationTaskPath : task->pathsFromConceptToThisTerm) {
+		vector<UnifiedTermIndex> walkedPathOfTask = PathWalker::walk(reasonerInstance, iterationTaskPath, task->unifiedTerm);
+
+		for (Path& iterationBeliefPath : belief->pathsFromConceptToThisTerm) {
+			vector<UnifiedTermIndex> walkedPathOfBelief = PathWalker::walk(reasonerInstance, iterationBeliefPath, belief->unifiedTerm);
+
+			deriveForPaths(reasonerInstance, walkedPathOfTask, walkedPathOfBelief);
+		}
+	}
+}
+
+void Inference::deriveForPaths(ReasonerInstance &reasonerInstance, vector<UnifiedTermIndex> &leftPathTermIndices, vector<UnifiedTermIndex> &rightPathTermIndices) {
+	// TODO<  decide if we append the "before tree" to the results here >
+	vector<UnifiedTerm> derivedTerms = derive(reasonerInstance, leftPathTermIndices, rightPathTermIndices, reasonerInstance.configuration.k);
 }
