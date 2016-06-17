@@ -2,66 +2,10 @@
 #include <cstdint>
 #include <vector>
 
-// fast and random enough hash function
-// from https://en.wikipedia.org/wiki/MurmurHash
-#define ROT32(x, y) ((x << y) | (x >> (32 - y))) // avoid effort
-uint32_t murmur3_32(const char *key, uint32_t len, uint32_t seed) {
-  static const uint32_t c1 = 0xcc9e2d51;
-  static const uint32_t c2 = 0x1b873593;
-  static const uint32_t r1 = 15;
-  static const uint32_t r2 = 13;
-  static const uint32_t m = 5;
-  static const uint32_t n = 0xe6546b64;
-
-  uint32_t hash = seed;
-
-  const int nblocks = len / 4;
-  const uint32_t *blocks = (const uint32_t *) key;
-  int i;
-  uint32_t k;
-  for (i = 0; i < nblocks; i++) {
-    k = blocks[i];
-    k *= c1;
-    k = ROT32(k, r1);
-    k *= c2;
-
-    hash ^= k;
-    hash = ROT32(hash, r2) * m + n;
-  }
-
-  const uint8_t *tail = (const uint8_t *) (key + nblocks * 4);
-  uint32_t k1 = 0;
-
-  switch (len & 3) {
-  case 3:
-    k1 ^= tail[2] << 16;
-  case 2:
-    k1 ^= tail[1] << 8;
-  case 1:
-    k1 ^= tail[0];
-
-    k1 *= c1;
-    k1 = ROT32(k1, r1);
-    k1 *= c2;
-    hash ^= k1;
-  }
-
-  hash ^= len;
-  hash ^= (hash >> 16);
-  hash *= 0x85ebca6b;
-  hash ^= (hash >> 13);
-  hash *= 0xc2b2ae35;
-  hash ^= (hash >> 16);
-
-  return hash;
-}
-
-
-
-
 
 using namespace std;
 
+/****
 // http://stackoverflow.com/questions/664014/what-integer-hash-function-are-good-that-accepts-an-integer-hash-key
 uint32_t hash_(uint32_t x) {
     x = ((x >> 16) ^ x) * 0x45d9f3b;
@@ -69,14 +13,15 @@ uint32_t hash_(uint32_t x) {
     x = ((x >> 16) ^ x);
     return x;
 }
+****/
 
+/****
 uint32_t bloomHash1(uint32_t x) {
   return hash_(x);
 }
+****/
 
-// http://stackoverflow.com/questions/453099/size-of-static-array
-template<typename T, size_t N> size_t elmentsOfArray( T (&arr)[N] ) { return N; }
-
+/****
 template<size_t NumberOfBits>
 struct StaticBitset {
   StaticBitset() {
@@ -132,8 +77,12 @@ struct StaticBitset {
 
   size_t array[NumberOfBits/(NUMBEROFBITSFORMACHINEWORD)+1]; // TODO< remove +1 if modulo is zero >
 };
+****/
 
 
+/******
+#include "StaticBitset.h"
+#include "Hash.h"
 
 
 template<size_t NumberOfBits, typename ValueType>
@@ -175,11 +124,15 @@ protected:
     return filter.get(index % NumberOfBits);
   }
 
-  //bool filter[NumberOfBits];
+  static uint32_t bloomHash1(uint32_t x) {
+	  return hash_(x);
+  }
+
   StaticBitset<NumberOfBits> filter;
 };
+*****/
 
-
+/*****
 typedef unsigned MachineType;
 
 const bool CHECK = true;
@@ -191,10 +144,16 @@ typedef ConceptTermIndexType TermIndexType;
 // unique id for a term for the state of the reasoner
 typedef uint32_t TermIdType;
 
+
+*****/
+
+
 // typesafe TermId type for the unique identification of a term
+/************
 struct TermId {
   uint32_t value;
-};
+};*****/
+
 
 
 // Typesafe Concept type
@@ -214,6 +173,7 @@ struct Concept {
   }
 };
 
+/************
 enum class EnumTermConcept {
   CONCEPT = 0, // must be 0 for fast check
   TERM
@@ -254,34 +214,15 @@ struct TermConcept {
 protected:
   ConceptTermIndexType folded; // highest bit encodes if its a term
 };
+******/
 
-
-/*
-classical stamp, beginning of algorithm, not continued because we use bloom filter and the other trick
-
-template<size_t NumberOfElements>
-struct Stamp {
-  Stamp() {
-    usedElements = 0;
-  }
-
-  static bool checkOverlap(Stamp<NumberOfElements> a, Stamp<NumberOfElements> b) {
-    // TODO  
-  }
-protected:
-  TermConcept trail[NumberOfElements];
-  size_t usedElements;
-};
-
-*/
-
-
+/******
 
 #include <array>
 #include <cstring>
-/**
+**
  * A stamp like in the classic NARS which contains the stamp history (as TermIdType values) and a bloomfilter for the values
- */
+ *
 template<size_t NumberOfElements, size_t BloofilterNumberOfBits>
 struct DualStamp {
   DualStamp() {
@@ -325,14 +266,11 @@ protected:
     }
   }
 };
-
-// for compiler testing
-void testInsert(DualStamp<10*2, 512> &stamp, vector<TermIdType> termIds) {
-  stamp.insertAtFront(termIds);
-}
+*****/
 
 
 
+/****
 struct FrequencyCertainty {
   FrequencyCertainty() {}
   
@@ -431,7 +369,7 @@ FrequencyCertainty fComparision(FrequencyCertainty _1, FrequencyCertainty _2, fl
   float certainty = (c1*c2*(f1+f2-f1*f2)) / (c1*c2*(f1+f2-f1*f2) + k);
   return FrequencyCertainty(frequency, certainty);
 }
-
+*****/
 
 
 
@@ -449,53 +387,6 @@ struct DerivationDescriptor {
   // helper for the creation of the DerivationDescriptor from the derivation of two UnifiedTerms
   static DerivationDescriptor create(UnifiedTerm a, TermConcept aTermConcept, UnifiedTerm b, TermConcept bTermConcept);
 };
-
-#include <stddef.h>     /* offsetof */
-
-enum class EnumTermFlags {
-  INHERITANCE_TOLEFT = 1, // <--
-  INHERITANCE_TORIGHT = 2, // -->
-};
-
-
-struct UnifiedTerm {
-  UnifiedTermIndex left, right;
-  uint32_t termFlags; // EnumTermFlags
-  TermId termId; // unique id of the term, is not GC'ed
-
-  FrequencyCertainty frequencyCertainty;
-
-  size_t termIndex; // gc'ed termIndex
-  uint32_t cachedHash;
-
-  void updateHash(ReasonerInstance &reasonerInstance) {
-    size_t numberOfTerms = 2;
-
-
-    uint32_t seed = 23;
-
-    
-    // assert that the sizes match up, because we cast it and put it into the vector
-    assert(sizeof(termFlags) == sizeof(left.maskOutIndex())); // sizeof(decltype(termFlags)));
-    // vector with the values which we need to hash
-    vector<decltype(termFlags)> hashVector(/* termId */1 + /* flags */1 + numberOfTerms);
-    hashVector[0] = static_cast<decltype(termFlags)>(termId.value);
-    hashVector[1] = static_cast<decltype(termFlags)>(termFlags);
-    
-    hashVector[2] = static_cast<decltype(termFlags)>(reasonerInstance.accessTermByIndex(left).cachedHash);
-    hashVector[3] = static_cast<decltype(termFlags)>(reasonerInstance.accessTermByIndex(right).cachedHash);
-
-    cachedHash = murmur3_32(reinterpret_cast<char*>(hashVector.data()), hashVector.size()*sizeof(decltype(termFlags)), seed); 
-  }
-};
-
-/*
-uint32_t testCalc(UnifiedTerm &term) {
-  return term.calcHash();
-}
-*/
-
-
 
 DerivationDescriptor DerivationDescriptor::create(UnifiedTerm a, TermConcept aTermConcept, UnifiedTerm b, TermConcept bTermConcept) {
   DerivationDescriptor result;
@@ -565,7 +456,7 @@ protected:
 };
 */
 
-
+/*******
 template<typename Type>
 struct BagEntity {
   BagEntity(Type value, float priority) {
@@ -618,11 +509,16 @@ protected:
 
   float prioritySum;
 };
+*****/
 
+
+
+/*******
 const unsigned STAMP_NUMBEROFELEMENTS = 2*10;
 const unsigned STAMP_BLOOMFILTERNUMBEROFBITS = 64*20;
 
 // typesafe
+
 struct UnifiedTermIndex {
   TermIndexType value;
 };
@@ -634,11 +530,15 @@ struct ClassicalTask {
   // COMMENT PATRICK< every task has a stamp >
   DualStamp<STAMP_NUMBEROFELEMENTS, STAMP_BLOOMFILTERNUMBEROFBITS> stamp;
 };
+****/
 
+/********
 struct ClassicalBelief {
   UnifiedTermIndex unifiedTerm;
 };
+******/
 
+/********
 #include <memory>
 
 struct ClassicalConcept {
@@ -648,7 +548,7 @@ struct ClassicalConcept {
   UnifiedTermIndex term; // mainly for debugging purposes
   uint32_t termHash; // unique hash of the term
 };
-
+********/
 
 
 
@@ -670,6 +570,7 @@ Iter binary_find(Iter begin, Iter end, const T &value, Compare comp) {
 }
 
 
+/********
 struct Configuration {
   float k;
 };
@@ -694,6 +595,7 @@ struct ReasonerInstance {
 protected:
 
 };
+************/
 
 
 
@@ -702,7 +604,7 @@ protected:
 
 // prototype of inference
 
-
+/***********
 struct Ruletable {
   enum class EnumDerivationSource {
     ALEFT,
@@ -777,7 +679,7 @@ private:
     }
   }
 };
-
+*********/
 
 // AUTOGENERATED (DERIVER)
 
