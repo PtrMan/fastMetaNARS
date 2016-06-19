@@ -37,6 +37,8 @@ SET(HEADERS
   source/mixed/PathDescriptor.h
   source/mixed/Path.h
   source/mixed/PathWalker.h
+  source/mixed/BinaryIndexTree.h
+  source/mixed/NumericHelper.h
 
   source/mixed/autogen/Deriver.h
 )
