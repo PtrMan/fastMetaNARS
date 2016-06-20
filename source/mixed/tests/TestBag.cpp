@@ -3,26 +3,6 @@
 #include "Bag.h"
 
 
-void testBinaryIndexTree() {
-	BinaryIndexTree<int64_t> tree;
-	tree.setSize(8);
-	tree.reset();
-
-	tree.update(1, 3);
-	tree.update(2, 4);
-	tree.update(3, 5);
-
-	for (size_t i = 0; i < 15; i++) {
-		bool found;
-		cout << "binaryIndexTree test:  i " << i << "  index " << tree.find(i, found, BinaryIndexTree<int64_t>::EnumFindType::ABOVE);
-		cout << "found " << found;
-		cout << endl;
-	}
-
-	int debug = 1;
-}
-
-
 // simple bag implementation for comparision
 template<typename Type>
 struct CompareCorrectBag {
@@ -102,10 +82,6 @@ bool areBagsEqual(float sampleGranularity, Bag<unsigned> &bagUnderTest, CompareC
 using namespace std;
 
 int main() {
-	testBinaryIndexTree();
-
-
-
 	Bag<unsigned> bagUnderTests;
 	CompareCorrectBag<unsigned> bagCorrect;
 
