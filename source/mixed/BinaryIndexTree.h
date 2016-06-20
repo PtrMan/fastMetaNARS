@@ -9,6 +9,10 @@ using namespace std;
 
 #include "NumericHelper.h"
 
+// for debugging
+#include <iostream>
+using namespace std;
+
 template<typename Type>
 struct BinaryIndexTree {
 	typedef int IndexType; // needs to be a signed type
@@ -64,41 +68,72 @@ struct BinaryIndexTree {
 		// negative and 0 index are illegal
 		assert(idx >= 1);
 
+		cout << "BinaryIndexTree.h : update() index=" << idx << " value=" << val << endl;
+
 	    while (idx <= getMaxVal()){
 	        tree[idx] += val;
 	        idx += (idx & -idx);
 	    }
 	}
 
+	/*
+	IndexType find(Type cumFre, bool &found) {
+		found = false;
+
+		int bitMask = 1 << integerLog(getMaxVal());
+
+		Type currentValue = tree[bitMask];
+
+		Type rightCandidate = currentValue + tree[bitMask | bitMask >> 1];
+
+
+	}*/
+
+	enum class EnumFindType {
+		EXACT,
+		ABOVE
+	};
+	
 	// if in tree exists more than one index with a same
 	// cumulative frequency, this procedure will return 
 	// some of them (we do not know which one)
-	IndexType find(Type cumFre, bool &found){
+	IndexType find(Type cumFre, bool &found, EnumFindType findType = EnumFindType::EXACT){
 		found = false;
 
 		// bitMask - initialy, it is the greatest bit of MaxVal
 		// bitMask store interval which should be searched
 		int bitMask = 1 << integerLog(getMaxVal());
 		
-		IndexType idx = 0; // this var is result of function
+		IndexType index = 0; // this var is result of function
 	    
-	    while ((bitMask != 0) && (idx < getMaxVal())){ // nobody likes overflow :)
-			IndexType tIdx = idx + bitMask; // we make midpoint of interval
-	        if (cumFre == tree[tIdx]) // if it is equal, we just return idx
-	            return tIdx;
-	        else if (cumFre > tree[tIdx]){ 
+	    while ((bitMask != 0) && (index < getMaxVal())){ // nobody likes overflow :)
+			IndexType tIndex = index + bitMask; // we make midpoint of interval
+			if (cumFre == tree[tIndex]) { // if it is equal, we just return index
+				found = true;
+				return tIndex;
+			}
+	        else if (cumFre > tree[tIndex]){
 	                // if tree frequency "can fit" into cumFre,
 	                // then include it
-	            idx = tIdx; // update index 
-	            cumFre -= tree[tIdx]; // set frequency for next loop 
+				index = tIndex; // update index 
+	            cumFre -= tree[tIndex]; // set frequency for next loop 
 	        }
 	        bitMask >>= 1; // half current interval
 	    }
-	    if (cumFre != 0) // maybe given cumulative frequency doesn't exist
-	        return -1;
+		if (cumFre != 0) {
+			// if we are here then its not an exact result
+
+			if (findType == EnumFindType::EXACT) {
+				return -1;
+			}
+			else {
+				found = true;
+				return index;
+			}
+		}
 	    else {
 	    	found = true;
-	        return idx;
+	        return index;
 	    }
 	}
 
