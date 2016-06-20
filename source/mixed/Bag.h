@@ -4,14 +4,20 @@
 #include <vector>
 #include <array>
 #include <cassert>
+#include <algorithm>
 
 using namespace std;
 
 #include "TypedefsAndDefines.h"
-//#include "BinaryIndexTree.h"
+#include "BinaryIndexTree.h"
+#include "NumericHelper.h"
 
 template<typename Type, typename PriorityType>
 struct BagEntity {
+	BagEntity() {
+		priority = static_cast<PriorityType>(0);
+	}
+
 	BagEntity(Type value, PriorityType priority) {
 		this->value = value;
 		this->priority = priority;
@@ -21,148 +27,107 @@ struct BagEntity {
 	Type value;
 };
 
-template<typename Type, typename PriorityType = float>
+struct BagQuantisizedPrioritySelectorStrategyBinaryIndexTree {
+
+};
+
+
+template<typename Type, typename PriorityType = float, typename PrioritySelectorStrategy>
 struct Bag {
 	Bag() {
-		prioritySum = static_cast<PriorityType>(0);
-		usedElements = 0;
+		prioritySumQuantisized = 0;
+		usedElementsWithoutEndSpare = 0;
+		endSpare = 0;
+		sparePrioritySumQuantisized = 0;
+		priorityQuantisation = static_cast<PriorityType>(0);
 	}
 
-	void setSize(size_t size, size_t minElementIndexDiff) {
-		elements.resize(size);
-		this->minElementIndexDiff = minElementIndexDiff;
+	void setPriorityQuantisation(PriorityType priorityQuantisation) {
+		this->priorityQuantisation = priorityQuantisation;
+	}
+
+	void setSize(size_t size) {
+		// set size next power of two and guarantee that enough spare space is available
+
+		unsigned numberOfBitsForSize = integerLog(size);
+		size_t nextPowerOfTwoSize = 1 << numberOfBitsForSize;
+
+		// assert that there is at least one element sparespace
+		// NOTE< for an efficient working the space should be much much larger than 1 >
+		assert(size < nextPowerOfTwoSize - 1);
+
+		binaryIndexTree.setSize(nextPowerOfTwoSize);
+		elements.resize(nextPowerOfTwoSize);
 	}
 
 
 	void put(Type element, PriorityType priority) {
-		prioritySum += priority;
+		uint64_t quantisizedPriority = quantisizePriority(priority);
+
+		prioritySumQuantisized += quantisizedPriority;
+
+		// insert sort
+		// TODO
+
 
 		// replace with index and adding one to #
 		elements[usedElements] = element;
-		usedElements++;
+		usedElementsWithoutEndSpare++;
 	}
 
 	// value is [0, 1]
 	Type reference(PriorityType value) {
-		size_t index = sample(value);
-		return elements[index].value;
+		size_t indexWithSpare = sampleWithSpare(value);
+		return elements[indexWithSpare].value;
 	}
 
 	// the caller implementation can decide the policy how and when to call his in which interval
-	// if elements get added to the bag the performance decreases linearly if this is not called regularly
 	void rebuild() {
-		rebuildInternal();
+
 	}
-
-	// for unittests public
-	vector<BagEntity<Type, PriorityType>> elements;
-
-
 protected:
-	// we store the priorities in a binary tree (with absolute priority sums)
-	struct PriorityBinaryTreeElement {
-		PriorityType splitPrioritySum;
-
-		size_t index;
-
-		typedef unique_ptr< array<shared_ptr<PriorityBinaryTreeElement>, 2> > ChildrenType;
-
-		// [0] is < splitPrioritySum
-		// [1] is >=
-		ChildrenType childrens;
-	};
+	uint64_t quantisizePriority(PriorityType priority) {
+		return static_cast<uint64_t>(static_cast<PriorityType>(priority) / priorityQuantisation);
+	}
 
 	// value is [0, 1]
-	size_t sample(PriorityType value) {
-		PriorityType absolutePriority = value * prioritySum;
+	size_t sampleWithSpare(PriorityType value) {
+		uint64_t absoluteQuantisizedPriority = static_cast<uint64_t>(static_cast<double>(value) * static_cast<double>(prioritySumQuantisized));
+		uint64_t absoluteQuantisizedPriorityWithSpare = absoluteQuantisizedPriority + sparePrioritySumQuantisized;
 
-		PriorityType accumulator;
-		MachineType entryIndex = sampleSearchEntry(priorityBinaryTree, absolutePriority, accumulator);
-		// TODO< handle # of added elements after "binary priority tree" rebuild
-		for (MachineType i = entryIndex; i < min(elements.size(), entryIndex + minElementIndexDiff); i++) {
-			if (accumulator > absolutePriority) {
-				return i;
-			}
-
-			accumulator += elements[i].priority;
-		}
-
-		return elements.size() - 1;
+		bool found;
+		size_t index = binaryIndexTree.find(absoluteQuantisizedPriorityWithSpare, found);
+		assert(found);
+		
+		return index;
 	}
 
-	// searches the entryfrom which the linear search should start from
-	size_t sampleSearchEntry(shared_ptr<PriorityBinaryTreeElement> entry, PriorityType absolutePriority, PriorityType &priorityAtEntry) {
-		if (!entry->childrens) {
-			priorityAtEntry = entry->splitPrioritySum;
-			return entry->index;
-		}
 
-		if (absolutePriority < entry->splitPrioritySum) {
-			return sampleSearchEntry(entry->childrens[0], absolutePriority, priorityAtEntry);
-		}
-		else {
-			return sampleSearchEntry(entry->childrens[1], absolutePriority, priorityAtEntry);
-		}
+	// helper
+	// inspired by
+	// http://stackoverflow.com/questions/446296/where-can-i-get-a-useful-c-binary-search-algorithm
+	template<class Iter, class T, class Compare>
+	static Iter binary_find(Iter begin, Iter end, const T &value, Compare comp) {
+		// Finds the lower bound in at most log(last - first) + 1 comparisons
+		Iter i = lower_bound(begin, end, value, comp);
+
+		if (i != end && comp(*i, value))
+			return i; // found
+		else
+			return end; // not found
 	}
 
-	void rebuildInternal() {
-		priorityBinaryTree.reset();
+	vector<BagEntity<Type, PriorityType>> elements;
 
-		// check because usedElements-1 would be bad
-		if (usedElements == 0) {
-			return;
-		}
+	BinaryIndexTree<uint64_t> binaryIndexTree;
 
-		vector<PriorityType> accumulatedPriorities = calcAccumulatedPriorities();
 
-		priorityBinaryTree = shared_ptr<PriorityBinaryTreeElement>(new PriorityBinaryTreeElement());
-		rebuildInternalHelper(accumulatedPriorities, priorityBinaryTree, 0, usedElements - 1);
-	}
+	size_t usedElementsWithoutEndSpare;
+	size_t endSpare; // how many elements at the ending are spare
+	                   // we do ignore the first elements to save some time for rearanging the array in case of a droped element
+	uint64_t sparePrioritySumQuantisized;
 
-	vector<PriorityType> calcAccumulatedPriorities() {
-		assert(usedElements <= elements.size());
-
-		vector<PriorityType> accumulatedPriorities(usedElements);
-
-		PriorityType prioritySum = 0;
-		for (size_t i = 0; i < usedElements; i++) {
-			accumulatedPriorities[i] = prioritySum;
-			prioritySum += elements[i].priority;
-		}
-
-		return accumulatedPriorities;
-	}
-
-	// rebuild binary tree
-	void rebuildInternalHelper(const vector<PriorityType> &accumulatedPriorities, shared_ptr<PriorityBinaryTreeElement> entry, size_t indexMin, size_t indexMax) {
-		assert(indexMin <= indexMax);
-
-		size_t indexDiff = indexMax - indexMin;
-
-		if (indexDiff <= minElementIndexDiff) {
-			return;
-		}
-
-		size_t indexMid = indexMin + indexDiff / 2;
-
-		entry->splitPrioritySum = accumulatedPriorities[indexMid];
-		entry->childrens = PriorityBinaryTreeElement::ChildrenType(new array<shared_ptr<PriorityBinaryTreeElement>, 2>());
-		entry->childrens->operator[](0) = shared_ptr<PriorityBinaryTreeElement>(new PriorityBinaryTreeElement());
-		entry->childrens->operator[](1) = shared_ptr<PriorityBinaryTreeElement>(new PriorityBinaryTreeElement());
-
-		rebuildInternalHelper(accumulatedPriorities, entry->childrens->operator[](0), indexMin, indexMid);
-		rebuildInternalHelper(accumulatedPriorities, entry->childrens->operator[](1), indexMid, indexMax);
-	}
-
-	size_t usedElements;
-
-	size_t minElementIndexDiff; // minimal number of elements from which a split for the priorityBinaryTree is done
-
-	PriorityType prioritySum;
-
-	// is allowed to be not that strictly binary at the end, any number of elements can be added at the end
-	// without the need to update the tree
-	// this has some performance impact
-	// this means that the binaryTree should be rebuild from time to time
-	shared_ptr<PriorityBinaryTreeElement> priorityBinaryTree;
+	uint64_t prioritySumQuantisized;
+	PriorityType priorityQuantisation;
 };
+
