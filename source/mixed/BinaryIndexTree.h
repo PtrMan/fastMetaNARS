@@ -1,6 +1,7 @@
 #pragma once
 
 // https://www.topcoder.com/community/data-science/data-science-tutorials/binary-indexed-trees/
+// explaination http://stackoverflow.com/questions/15439233/bitusing-a-binary-indexed-tree
 
 #include <cstddef>
 #include <vector>
