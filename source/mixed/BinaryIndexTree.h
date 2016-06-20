@@ -11,13 +11,15 @@ using namespace std;
 
 template<typename Type>
 struct BinaryIndexTree {
+	typedef int IndexType; // needs to be a signed type
+
 	void reset() {
-		for( size_t i = 0; i < tree.size(); i++ ) {
+		for(IndexType i = 0; i < tree.size(); i++ ) {
 			tree[i] = 0;
 		}
 	}
 
-	void setSize(size_t size) {
+	void setSize(IndexType size) {
 		assert(isPowerOfTwo(size));
 		tree.resize(size);
 	}
@@ -28,7 +30,10 @@ struct BinaryIndexTree {
 
 	vector<Type> tree;
 
-	Type read(size_t idx){
+	Type read(IndexType idx){
+		// negative and 0 index are illegal
+		assert(idx >= 1);
+
 	    Type sum = 0;
 	    while (idx > 0){
 	        sum += tree[idx];
@@ -38,10 +43,13 @@ struct BinaryIndexTree {
 	}
 
 	// reads actualy frequency at index
-	Type readSingle(size_t idx) {
+	Type readSingle(IndexType idx) {
+		// negative and 0 index are illegal
+		assert(idx >= 1);
+
 		Type sum = tree[idx]; // sum will be decreased
 		if (idx > 0) { // special case
-			int z = static_cast<int>(idx) - (static_cast<int>(idx) & -static_cast<int>(idx)); // make z first
+			int z = idx - (idx & -idx); // make z first
 			idx--; // idx is no important any more, so instead y, you can use idx
 			while (idx != z) { // at some iteration idx (y) will become z
 				sum -= tree[idx];
@@ -52,7 +60,10 @@ struct BinaryIndexTree {
 		return sum;
 	}
 
-	void update(size_t idx, Type val){
+	void update(IndexType idx, Type val){
+		// negative and 0 index are illegal
+		assert(idx >= 1);
+
 	    while (idx <= getMaxVal()){
 	        tree[idx] += val;
 	        idx += (idx & -idx);
@@ -62,17 +73,17 @@ struct BinaryIndexTree {
 	// if in tree exists more than one index with a same
 	// cumulative frequency, this procedure will return 
 	// some of them (we do not know which one)
-	size_t find(Type cumFre, bool &found){
+	IndexType find(Type cumFre, bool &found){
 		found = false;
 
 		// bitMask - initialy, it is the greatest bit of MaxVal
 		// bitMask store interval which should be searched
 		int bitMask = 1 << integerLog(getMaxVal());
 		
-	    size_t idx = 0; // this var is result of function
+		IndexType idx = 0; // this var is result of function
 	    
 	    while ((bitMask != 0) && (idx < getMaxVal())){ // nobody likes overflow :)
-	        size_t tIdx = idx + bitMask; // we make midpoint of interval
+			IndexType tIdx = idx + bitMask; // we make midpoint of interval
 	        if (cumFre == tree[tIdx]) // if it is equal, we just return idx
 	            return tIdx;
 	        else if (cumFre > tree[tIdx]){ 

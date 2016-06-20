@@ -7,19 +7,36 @@ template<typename Type>
 struct CompareCorrectBag {
 	CompareCorrectBag() {
 		prioritySum = static_cast<float>(0);
+		priorityQuantisation = static_cast<float>(0.001);
 	}
 
-	void put(Type element, float priority) {
-		prioritySum += priority;
-		elements.push_back(BagEntity<Type>(element, priority));
+	void setPriorityQuantisation(float priorityQuantisation) {
+		this->priorityQuantisation = priorityQuantisation;
+	}
+
+	void put(shared_ptr<BagEntity<Type, float>> element) {
+		unsigned quantisizedPriorityInt = quantisizePriority(element->getPriority());
+		float quanisizedPriority = static_cast<float>(quantisizedPriorityInt) * priorityQuantisation;
+
+		prioritySum += quanisizedPriority;
+		elements.push_back(element);
 	}
 
 	// value is [0, 1]
-	Type reference(float value) {
+	shared_ptr<BagEntity<Type, float>> reference(float value) {
 		size_t index = sample(value);
-		return elements[index].value;
+		return elements[index];
 	}
+
+	
 protected:
+	uint64_t quantisizePriority(float priority) {
+		return static_cast<unsigned>(priority / priorityQuantisation);
+	}
+
+
+	float priorityQuantisation;
+	
 	// superslow algorithm
 	// value is [0, 1]
 	size_t sample(float value) {
@@ -31,21 +48,34 @@ protected:
 				return i;
 			}
 
-			accumulator += elements[i].priority;
+			// simulate what our bag does with the quantisation
+			unsigned quantisizedPriorityInt = quantisizePriority(elements[i]->getPriority());
+			float quanisizedPriority = static_cast<float>(quantisizedPriorityInt) * priorityQuantisation;
+			accumulator += quanisizedPriority;
 		}
 
 		return elements.size() - 1;
 	}
 
-	vector<BagEntity<Type>> elements;
+	vector<shared_ptr<BagEntity<Type, float>>> elements;
 
 	float prioritySum;
 };
 
 
 
+bool areBagsEqual(float sampleGranularity, Bag<unsigned> &bagUnderTest, CompareCorrectBag<unsigned> &bagCorrect) {
+	for (float i = 0.0f; i < 1.0f; i += sampleGranularity) {
+		bool isEqual = bagUnderTest.reference(i)->value == bagCorrect.reference(i)->value;
+		if (!isEqual) {
+			return false;
+		}
+	}
+	return true;
+}
 
-
+#include <iostream>
+using namespace std;
 
 int main() {
 	cout << "Hello World" << endl;
@@ -54,8 +84,11 @@ int main() {
 	CompareCorrectBag<unsigned> bagCorrect;
 
 	size_t bagSize = 100;
-	size_t minElementIndexDiff = 5;
-	bagUnderTests.setSize(bagSize, minElementIndexDiff);
+	bagUnderTests.setMaxSize(bagSize);
+
+	float priorityQuantisation = 0.01f;
+	bagUnderTests.setPriorityQuantisation(priorityQuantisation);
+	bagCorrect.setPriorityQuantisation(priorityQuantisation);
 
 
 	size_t numberOfElements = 0;
@@ -63,13 +96,20 @@ int main() {
 	for (size_t i = 0; i < 98; i++) {
 		// TODO< use rng and do action >
 
+		shared_ptr<BagEntity<unsigned, float>> elementToAdd1, elementToAdd2;
+		elementToAdd1 = make_shared<BagEntity<unsigned, float>>(BagEntity<unsigned, float>(i, 0.1f));
+		elementToAdd2 = make_shared<BagEntity<unsigned, float>>(BagEntity<unsigned, float>(i, 0.1f));
 
+		bagUnderTests.put(elementToAdd1);
+		bagCorrect.put(elementToAdd1);
+
+		cout << "i " << i << endl;
 
 		// check if bags are equal
-		bool bagsAreEqual = areBagsEqual(0.001f, bagUnderTests, bagCorrect);
+		bool bagsAreEqual = areBagsEqual(0.0005f, bagUnderTests, bagCorrect);
 		if (!bagsAreEqual) {
-			cout << "Failed(before rebuild) ", i << endl;
-			return;
+			cout << "Failed(before rebuild) " << i << endl;
+			return 1;
 		}
 
 		if (i % 20 == 0) {
@@ -78,10 +118,10 @@ int main() {
 		}
 
 		// check if bags are equal
-		bool bagsAreEqual = areBagsEqual(0.001f, bagUnderTests, bagCorrect);
+		bagsAreEqual = areBagsEqual(0.0005f, bagUnderTests, bagCorrect);
 		if (!bagsAreEqual) {
-			cout << "Failed(after rebuild) ", i << endl;
-			return;
+			cout << "Failed(after rebuild) " << i << endl;
+			return 1;
 		}
 
 	}
@@ -95,7 +135,9 @@ int main() {
 
 // TODO< write unittests >
 
+/*
 int main(int argc, char **argv) {
 	::testing::InitGoogleTest(&argc, argv);
 	return RUN_ALL_TESTS();
 }
+*/
