@@ -208,13 +208,6 @@ public:
 	}
 protected:
 	bool isRebuildRequired() {
-		int x = elements.size();
-		int y = prioritySelectionStrategy.getBeginningUnusable();
-		
-		if (!(usedElements <= x - y)) {
-			int deb = 1;
-		}
-
 		assert(usedElements <= elements.size() - prioritySelectionStrategy.getBeginningUnusable());
 		return usedElements == elements.size() - prioritySelectionStrategy.getBeginningUnusable();
 	}
