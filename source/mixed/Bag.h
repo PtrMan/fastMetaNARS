@@ -53,7 +53,7 @@ public:
 	}
 
 	size_t find(BinaryIndexTreeType cumFre, bool &found) {
-		return binaryIndexTree.find(cumFre, found);
+		return binaryIndexTree.find(cumFre, found, BinaryIndexTree<BinaryIndexTreeType>::EnumFindType::ABOVE);
 	}
 
 	BinaryIndexTreeType readSingle(size_t index) {
