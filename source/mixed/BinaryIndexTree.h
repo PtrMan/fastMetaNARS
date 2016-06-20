@@ -37,6 +37,21 @@ struct BinaryIndexTree {
 	    return sum;
 	}
 
+	// reads actualy frequency at index
+	Type readSingle(size_t idx) {
+		Type sum = tree[idx]; // sum will be decreased
+		if (idx > 0) { // special case
+			int z = static_cast<int>(idx) - (static_cast<int>(idx) & -static_cast<int>(idx)); // make z first
+			idx--; // idx is no important any more, so instead y, you can use idx
+			while (idx != z) { // at some iteration idx (y) will become z
+				sum -= tree[idx];
+				// substruct tree frequency which is between y and "the same path"
+				idx -= (idx & -idx);
+			}
+		}
+		return sum;
+	}
+
 	void update(size_t idx, Type val){
 	    while (idx <= getMaxVal()){
 	        tree[idx] += val;

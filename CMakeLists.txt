@@ -9,6 +9,7 @@ SET(SOURCE
   source/mixed/UnifiedTerm.cpp
   source/mixed/Inference.cpp
   source/mixed/PathWalker.cpp
+  source/mixed/NumericHelper.cpp
 
   source/mixed/autogen/Deriver.cpp
 )
