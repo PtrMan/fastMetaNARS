@@ -56,7 +56,7 @@ set(GTEST_LIBRARY_DIRS "" CACHE FILEPATH "path to gtest library directory")
 
 link_directories(${GTEST_LIBRARY_DIRS})
 include_directories(${GTEST_INCLUDE_DIRS})
-ADD_EXECUTABLE(fastMetaNARSUnittests ${SOURCE}  source/mixed/tests/TestBag.cpp source/mixed/tests/TestinaryIndexTree.cpp   ${HEADERS})
+ADD_EXECUTABLE(fastMetaNARSUnittests ${SOURCE}  source/mixed/tests/TestBag.cpp source/mixed/tests/TestBinaryIndexTree.cpp   ${HEADERS})
 set_target_properties(fastMetaNARSUnittests PROPERTIES LINKER_LANGUAGE CXX)
 target_link_libraries(fastMetaNARSUnittests gtest)
 
