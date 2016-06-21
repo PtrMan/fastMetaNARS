@@ -101,6 +101,8 @@ struct BinaryIndexTree {
 	// cumulative frequency, this procedure will return 
 	// some of them (we do not know which one)
 	IndexType find(Type cumFre, bool &found, EnumFindType findType = EnumFindType::EXACT){
+		
+
 		found = false;
 
 		// bitMask - initialy, it is the greatest bit of MaxVal
@@ -116,6 +118,7 @@ struct BinaryIndexTree {
 				// because if we would not do the findType == EnumFindType::EXACT test it would point us to the half where it didn't match jet
 				if (findType == EnumFindType::EXACT) {
 					found = true;
+					cout << "BinaryIndexTree.h : find() commulative=" << cumFre << " resultIndex=" << tIndex << endl;
 					return tIndex;
 				}
 			}
@@ -135,11 +138,13 @@ struct BinaryIndexTree {
 			}
 			else {
 				found = true;
+				cout << "BinaryIndexTree.h : find() commulative=" << cumFre << " resultIndex=" << index << endl;
 				return index;
 			}
 		}
 	    else {
 	    	found = true;
+			cout << "BinaryIndexTree.h : find() commulative=" << cumFre << " resultIndex=" << index << endl;
 	        return index;
 	    }
 	}

@@ -45,6 +45,9 @@ struct CompareCorrectBag {
 		return elements[index];
 	}
 
+	void setMaxSize(size_t size) {
+		maxSize = size;
+	}
 	
 protected:
 	uint64_t quantisizePriority(float priority) {
@@ -61,13 +64,15 @@ protected:
 
 		int64_t accumulator = 0.0f;
 		for (MachineType i = 0; i < elements.size(); i++) {
-			if (accumulator > absolutePriority) {
-				return i;
-			}
-
 			// simulate what our bag does with the quantisation
 			unsigned quantisizedPriorityInt = quantisizePriority(elements[i]->getPriority());
 			accumulator += quantisizedPriorityInt;
+			
+			if (accumulator >= absolutePriority) {
+				return i;
+			}
+
+			
 		}
 
 		return elements.size() - 1;
@@ -76,37 +81,29 @@ protected:
 	vector<shared_ptr<BagEntity<Type, float>>> elements;
 
 	uint64_t prioritySumQuantisized = 0;
+
+	size_t maxSize;
 };
 
 
 
-bool areBagsEqual(float sampleGranularity, Bag<unsigned> &bagUnderTest, CompareCorrectBag<unsigned> &bagCorrect) {
+void checkBagsEqual(float sampleGranularity, Bag<unsigned> &bagUnderTest, CompareCorrectBag<unsigned> &bagCorrect) {
 	for (float i = 0.0f; i < 1.0f; i += sampleGranularity) {
-		bool isEqual = bagUnderTest.reference(i)->value == bagCorrect.reference(i)->value;
-		if (!isEqual) {
-			cout << "expected " << bagCorrect.reference(i)->value << endl;
-			cout << "actual   " << bagUnderTest.reference(i)->value << endl;
-
-			return true;
-		}
+		ASSERT_EQ(bagUnderTest.reference(i)->value, bagCorrect.reference(i)->value);
 	}
-	return true;
 }
 
 #include <iostream>
 using namespace std;
 
-/*
-int main() {
-	//testBinaryIndexTree2();
-
-
+TEST(BagTest, fill) {
 
 	Bag<unsigned> bagUnderTests;
 	CompareCorrectBag<unsigned> bagCorrect;
 
 	size_t bagSize = 100;
 	bagUnderTests.setMaxSize(bagSize);
+	bagCorrect.setMaxSize(bagSize);
 
 	float priorityQuantisation = 0.01f;
 	bagUnderTests.setPriorityQuantisation(priorityQuantisation);
@@ -115,7 +112,8 @@ int main() {
 
 	size_t numberOfElements = 0;
 
-	for (size_t i = 0; i < 98; i++) {
+
+	for (size_t i = 0; i < 2; i++) {
 		// TODO< use rng and do action >
 
 		shared_ptr<BagEntity<unsigned, float>> elementToAdd1, elementToAdd2;
@@ -127,36 +125,18 @@ int main() {
 
 		cout << "i " << i << endl;
 
-		// check if bags are equal
-		bool bagsAreEqual = areBagsEqual(0.05f, bagUnderTests, bagCorrect);
-		if (!bagsAreEqual) {
-			cout << "Failed(before rebuild) " << i << endl;
-			return 1;
-		}
+		checkBagsEqual(0.05f, bagUnderTests, bagCorrect);
 
 		if (i % 20 == 0) {
 			// rebuild tree structure
 			bagUnderTests.rebuild();
 		}
 
-		// check if bags are equal
-		bagsAreEqual = areBagsEqual(0.05f, bagUnderTests, bagCorrect);
-		if (!bagsAreEqual) {
-			cout << "Failed(after rebuild) " << i << endl;
-			return 1;
-		}
+		checkBagsEqual(0.05f, bagUnderTests, bagCorrect);
 
 	}
-
-
-
-	return 0;
 }
-*/
 
-
-
-// TODO< write unittests >
 
 
 int main(int argc, char **argv) {

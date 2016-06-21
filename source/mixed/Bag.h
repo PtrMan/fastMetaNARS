@@ -45,6 +45,8 @@ public:
 	}
 
 	void reset() {
+		cout << "reset" << endl;
+
 		binaryIndexTree.reset(); // initialize
 	}
 
