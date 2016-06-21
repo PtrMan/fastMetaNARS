@@ -95,6 +95,8 @@ struct BinaryIndexTree {
 		ABOVE
 	};
 	
+	// TODO< if mode is nonexact, go down the tree as long as the value stays equal, if it gets less return the previous result >
+
 	// if in tree exists more than one index with a same
 	// cumulative frequency, this procedure will return 
 	// some of them (we do not know which one)
@@ -109,9 +111,13 @@ struct BinaryIndexTree {
 	    
 	    while ((bitMask != 0) && (index < getMaxVal())){ // nobody likes overflow :)
 			IndexType tIndex = index + bitMask; // we make midpoint of interval
-			if (cumFre == tree[tIndex]) { // if it is equal, we just return index
-				found = true;
-				return tIndex;
+			if (cumFre == tree[tIndex]) {
+				// if it is equal, we just return index, only if we return exact values
+				// because if we would not do the findType == EnumFindType::EXACT test it would point us to the half where it didn't match jet
+				if (findType == EnumFindType::EXACT) {
+					found = true;
+					return tIndex;
+				}
 			}
 	        else if (cumFre > tree[tIndex]){
 	                // if tree frequency "can fit" into cumFre,

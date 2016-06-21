@@ -229,7 +229,7 @@ protected:
 
 	// value is [0, 1]
 	size_t sampleWithSpare(PriorityType value) {
-		unsigned quantisizedPriorityValue = quantisizePriority(value);
+		int64_t quantisizedPriorityValue = static_cast<int64_t>(value * static_cast<PriorityType>(prioritySumQuantisized));
 
 
 		// we can just sample because removed elements do have a quantisized priority of zero,
