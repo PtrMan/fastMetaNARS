@@ -37,6 +37,11 @@ struct CompareCorrectBag {
 		prioritySumQuantisized += quantisizedPriorityInt;
 
 		elements.push_back(element);
+
+		if (elements.size() > maxSize) {
+			std::sort(elements.begin(), elements.end(), std::less);
+			elements.resize(maxSize);
+		}
 	}
 
 	// value is [0, 1]
@@ -93,6 +98,28 @@ void checkBagsEqual(float sampleGranularity, Bag<unsigned> &bagUnderTest, Compar
 	}
 }
 
+void checkBagsEqualByMarkingElements(size_t checkSize, float sampleGranularity, Bag<unsigned> &bagUnderTest, CompareCorrectBag<unsigned> &bagCorrect) {
+	vector<bool> checkForUnderTest(checkSize), checkForCorrect(checkSize);
+
+	for (size_t i = 0; i < checkForUnderTest.size(); i++) {
+		checkForUnderTest[i] = false;
+		checkForCorrect[i] = false;
+	}
+	
+	for (float i = 0.0f; i < 1.0f; i += sampleGranularity) {
+		checkForUnderTest[bagUnderTest.reference(i)->value] = true;
+	}
+
+	for (float i = 0.0f; i < 1.0f; i += sampleGranularity) {
+		checkForCorrect[bagCorrect.reference(i)->value] = true;
+	}
+
+	for (size_t i = 0; i < checkSize; i++) {
+		ASSERT_EQ(checkForUnderTest[i], checkForCorrect[i]);
+	}
+}
+
+
 #include <iostream>
 using namespace std;
 
@@ -142,6 +169,9 @@ TEST(BagTest, fillNotOversaturated) {
 
 	}
 }
+
+
+
 
 
 TEST(BagTest, fillOversaturated) {
