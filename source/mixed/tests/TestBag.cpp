@@ -96,12 +96,19 @@ void checkBagsEqual(float sampleGranularity, Bag<unsigned> &bagUnderTest, Compar
 #include <iostream>
 using namespace std;
 
-TEST(BagTest, fill) {
+
+
+// TODO< test that it sorts it correctly (from big priority to low priority) >
+
+
+
+
+TEST(BagTest, fillNotOversaturated) {
 
 	Bag<unsigned> bagUnderTests;
 	CompareCorrectBag<unsigned> bagCorrect;
 
-	size_t bagSize = 100;
+	size_t bagSize = 20;
 	bagUnderTests.setMaxSize(bagSize);
 	bagCorrect.setMaxSize(bagSize);
 
@@ -110,18 +117,15 @@ TEST(BagTest, fill) {
 	bagCorrect.setPriorityQuantisation(priorityQuantisation);
 
 
-	size_t numberOfElements = 0;
-
-
-	for (size_t i = 0; i < 2; i++) {
-		// TODO< use rng and do action >
-
+	for (size_t i = 0; i < bagSize-1; i++) {
 		shared_ptr<BagEntity<unsigned, float>> elementToAdd1, elementToAdd2;
 		elementToAdd1 = make_shared<BagEntity<unsigned, float>>(BagEntity<unsigned, float>(i, 0.1f));
 		elementToAdd2 = make_shared<BagEntity<unsigned, float>>(BagEntity<unsigned, float>(i, 0.1f));
 
 		bagUnderTests.put(elementToAdd1);
 		bagCorrect.put(elementToAdd1);
+
+		ASSERT_EQ(bagUnderTests.getSize(), bagCorrect.getSize());
 
 		cout << "i " << i << endl;
 
@@ -132,7 +136,52 @@ TEST(BagTest, fill) {
 			bagUnderTests.rebuild();
 		}
 
+		ASSERT_EQ(bagUnderTests.getSize(), bagCorrect.getSize());
+
 		checkBagsEqual(0.05f, bagUnderTests, bagCorrect);
+
+	}
+}
+
+
+TEST(BagTest, fillOversaturated) {
+
+	Bag<unsigned> bagUnderTests;
+	CompareCorrectBag<unsigned> bagCorrect;
+
+	size_t bagSize = 20;
+	bagUnderTests.setMaxSize(bagSize);
+	bagCorrect.setMaxSize(bagSize);
+
+	float priorityQuantisation = 0.01f;
+	bagUnderTests.setPriorityQuantisation(priorityQuantisation);
+	bagCorrect.setPriorityQuantisation(priorityQuantisation);
+
+
+	for (size_t i = 0; i < bagSize*2; i++) {
+		// TODO< use rng and do action >
+
+		shared_ptr<BagEntity<unsigned, float>> elementToAdd1, elementToAdd2;
+		elementToAdd1 = make_shared<BagEntity<unsigned, float>>(BagEntity<unsigned, float>(i, static_cast<float>(i+1)*0.1f));
+		elementToAdd2 = make_shared<BagEntity<unsigned, float>>(BagEntity<unsigned, float>(i, static_cast<float>(i+1)*0.1f));
+
+		bagUnderTests.put(elementToAdd1);
+		bagCorrect.put(elementToAdd1);
+
+		ASSERT_EQ(bagUnderTests.getSize(), bagCorrect.getSize());
+
+		cout << "i " << i << endl;
+
+		checkBagsEqualByMarkingElements(bagSize*2, 0.05f, bagUnderTests, bagCorrect);
+
+		if (i % 20 == 0) {
+			// rebuild tree structure
+			bagUnderTests.rebuild();
+		}
+
+		ASSERT_EQ(bagUnderTests.getSize(), bagCorrect.getSize());
+
+		checkBagsEqualByMarkingElements(bagSize * 2, 0.05f, bagUnderTests, bagCorrect);
 
 	}
 }

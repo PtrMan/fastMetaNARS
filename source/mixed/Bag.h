@@ -123,6 +123,8 @@ public:
 
 
 	void put(shared_ptr<BagEntityType> element) {
+		removeElementWithLowestPriorityIfRequired();
+
 		uint64_t quantisizedPriority = quantisizePriority(element->getPriority());
 
 		prioritySumQuantisized += quantisizedPriority;
@@ -178,6 +180,7 @@ public:
 			vector<shared_ptr<BagEntityType>> newElements(elements.size());
 
 			for (size_t i = 0; i < indirectionTable.size(); i++) {
+				assert(elements[indirectionTable[i]]); // assert that the smart pointer points to an object
 				newElements[i] = elements[indirectionTable[i]];
 			}
 
@@ -194,6 +197,8 @@ public:
 
 		// repopulate PrioritySelectionStrategy
 		{
+			uint64_t prioritySumQuantisizedOfIndirectionTable = 0;
+
 			prioritySelectionStrategy.reset();
 
 			for (size_t i = 0; i < indirectionTable.size(); i++) {
@@ -201,7 +206,12 @@ public:
 				assert(indirectionTable[i] == i);
 
 				prioritySelectionStrategy.updateDelta(i, quantisizePriority(elements[i]->getPriority()));
+
+				prioritySumQuantisizedOfIndirectionTable += quantisizePriority(elements[i]->getPriority());
 			}
+
+			// make sure that we had nowhere a priority sum missmatch/leak
+			assert(prioritySumQuantisizedOfIndirectionTable == prioritySumQuantisized);
 		}
 	}
 
@@ -209,6 +219,36 @@ public:
 		return indirectionTable.size();
 	}
 protected:
+	void removeElementWithLowestPriorityIfRequired() {
+		assert(getSize() != 0);
+		assert(getSize() >= indirectionTable.size());
+		bool removeElementRequired = getSize() == indirectionTable.size();
+		if (removeElementRequired) {
+			removeElementWithLowestPriority();
+		}
+	}
+
+	void removeElementWithLowestPriority() {
+		assert(indirectionTable.size() > 0);
+		
+		size_t elementIndex = indirectionTable[indirectionTable.size() - 1];
+		assert(elementIndex <= elements.size());
+
+		shared_ptr<BagEntityType> lastElement = elements[elementIndex];
+
+		// subtract the priority from the prioritySelectionStrategy at the index to make it zero, because we don't want to select his anymore based on the accumulated priorities
+		prioritySelectionStrategy.updateDelta(elementIndex, -static_cast<int64_t>(quantisizePriority(lastElement->getPriority())));
+
+		assert(static_cast<int64_t>(prioritySumQuantisized) >= static_cast<int64_t>(quantisizePriority(lastElement->getPriority())));
+		prioritySumQuantisized = static_cast<uint64_t>(static_cast<int64_t>(prioritySumQuantisized) - static_cast<int64_t>(quantisizePriority(lastElement->getPriority())));
+
+		// we don't want to point at the element anymore because we deleted it effectivly
+		elements[elementIndex].reset();
+
+		// remove it from the (sorted) indirectionTable
+		indirectionTable.pop_back();
+	}
+
 	bool isRebuildRequired() {
 		assert(usedElements <= elements.size() - prioritySelectionStrategy.getBeginningUnusable());
 		return usedElements == elements.size() - prioritySelectionStrategy.getBeginningUnusable();
