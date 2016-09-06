@@ -13,8 +13,9 @@ enum EnumOperationType {
 	POUNDKEY, // #
 	SIMILARITY, // <->
 	INHERITANCE, // -->
+	IMPLCIATION, // ==>
 	HALFH, // |-
-	VAR, // $
+	VAR, // $   TODO< rename to dependent or independent var
 }
 
 class RuleLexer : Lexer!EnumOperationType {
@@ -69,6 +70,11 @@ class RuleLexer : Lexer!EnumOperationType {
 			token.type = Token!EnumOperationType.EnumType.OPERATION;
 			token.contentOperation = EnumOperationType.VAR;
 		}
+		else if( ruleIndex == 12 ) {
+			token.type = Token!EnumOperationType.EnumType.OPERATION;
+			token.contentOperation = EnumOperationType.IMPLCIATION;
+		}
+
 
 
 		return token;
@@ -87,7 +93,7 @@ class RuleLexer : Lexer!EnumOperationType {
 		tokenRules ~= Lexer!EnumOperationType.Rule(r"^(\|-)");
 		tokenRules ~= Lexer!EnumOperationType.Rule(r"^([a-zA-Z][0-9A-Za-z]*)");
 		tokenRules ~= Lexer!EnumOperationType.Rule(r"^\$");
-
+		tokenRules ~= Lexer!EnumOperationType.Rule(r"^(==>)");
 	}
 }
 
@@ -190,19 +196,21 @@ class Parser : AbstractParser!EnumOperationType {
 		/* 18 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ERROR    , 0                                                    , &nothing             , 0                     , nullUint                     );
 		/* 19 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ERROR    , 0                                                    , &nothing             , 0                     , nullUint                     );
 		
-		// ARC which parses the mail sequence (SYM --> SYM) ... |- (SYM --> SYM)    :NAME (...) ...
+		const size_t MAINSEQUENCESTART = 20;
+
+		// ARC which parses the main sequence (SYM --> SYM) ... |- (SYM --> SYM)    :NAME (...) ...
 		//  entry
-		/* 20 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.BRACEOPEN                , &beginBrace         , 22, Nullable!uint(21));
-		/* 21 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.HALFH                    , &nothing         , 24, nullUint);
-		/* 22 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ARC      , 10                                                   , &nothing, 23, nullUint);
-		/* 23 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.NIL      , 0                                                    , &storeTokensToBraceAndAddToRule, 20, nullUint);
+		/* 20 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.BRACEOPEN                , &beginBrace         , MAINSEQUENCESTART+2, Nullable!uint(MAINSEQUENCESTART+1));
+		/* 21 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.HALFH                    , &nothing         , MAINSEQUENCESTART+4, nullUint);
+		/* 22 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ARC      , 10                                                   , &nothing, MAINSEQUENCESTART+3, nullUint);
+		/* 23 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.NIL      , 0                                                    , &storeTokensToBraceAndAddToRule, MAINSEQUENCESTART, nullUint);
 		
 		//  HALFH was read, this handles the 2nd part
-		/* 24 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.NIL      , 0                                                    , &setToTransformationResult         , 25, nullUint);
+		/* 24 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.NIL      , 0                                                    , &setToTransformationResult         , MAINSEQUENCESTART+5, nullUint);
 
 		// TODO
-		/* 25 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.BRACEOPEN                , &beginBrace         , 26, nullUint);
-		/* 26 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ARC      , 10                                                   , &nothing, 27, nullUint);
+		/* 25 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.BRACEOPEN                , &beginBrace         , MAINSEQUENCESTART+6, nullUint);
+		/* 26 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ARC      , 10                                                   , &nothing, MAINSEQUENCESTART+7, nullUint);
 		/* 27 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.NIL      , 0                                                    , &storeTokensToBraceAndAddToRule         , 30, nullUint);
 
 		/* 28 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ERROR    , 0                                                    , &nothing             , 0                     , nullUint                     );
@@ -535,10 +543,33 @@ void main() {
 
 	//lexer.setSource("""
 //#R[(A --> B) (B --> C) |- (A --> C) :pre ((:!= A C)) :post (:t/deduction :d/strong :allow-backward)]""");
+
+	//* uncommented 06.09.2016, worked, just want to experiment with variables below
 lexer.setSource(
 """
 #R[(M --> P) (M --> S) |- (S <-> P) :post (:t/comparison :d/weak :allow-backward) :pre ((:!= S P))]
 #R[(M --> P) (S <-> M) |- (S --> P) :pre ((:!= S P)) :post (:t/analogy :d/strong :allow-backward)]""");
+	//*/
+
+	/+ TODO do this
+	lexer.setSource(
+	"""
+	 #R[(S --> M) (P --> M) |- ((P --> $X) ==> (S --> $X)) :post (:t/abduction)
+                               ]
+	"""
+	+/
+
+	/* uncommented because its in a crappy format, still TODO
+	lexer.setSource(
+	"""
+	 #R[(S --> M) (P --> M) |- (((P --> $X) ==> (S --> $X)) :post (:t/abduction)
+                                      ((S --> $X) ==> (P --> $X)) :post (:t/induction)
+                                      ((P --> $X) <=> (S --> $X)) :post (:t/comparison)
+                                      (&& (S --> #Y) (P --> #Y)) :post (:t/intersection))
+                                          :pre (:belief? (:!= S P))]
+	""");
+	*/
+
 
 	parser.setLexer(lexer);
    	
