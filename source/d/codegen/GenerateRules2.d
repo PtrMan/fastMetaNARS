@@ -167,6 +167,10 @@ class Parser : AbstractParser!EnumOperationType {
 
 		Nullable!uint nullUint;
 
+		const size_t MAINSEQUENCESTART = 40;
+		const size_t DICTIONARYSTART = 50;
+		const size_t VALUEINBRACESTART = 60;
+
 		// Tree
 		/*  0 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ARC      , 2                                                    , &nothing, 0, Nullable!uint(1));
 		/*  1 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.END      , 0                                                    , &nothing,0, nullUint                   );
@@ -174,12 +178,13 @@ class Parser : AbstractParser!EnumOperationType {
 		/*  2 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.POUNDKEY                 , &beginRule         , 3, nullUint);
 		/*  3 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.TOKEN    , cast(uint)Token!EnumOperationType.EnumType.IDENTIFIER, &nothing           , 4, nullUint);
 		/*  4 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.BRACKETOPEN              , &nothing       , 5, nullUint);
-		/*  5 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ARC      , 20  , &nothing, 6, nullUint);
+		/*  5 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ARC      , MAINSEQUENCESTART  , &nothing, 6, nullUint);
 		/*  6 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.BRACKETCLOSE             , &nothing       , 1, nullUint);
 
 		/*  7 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ERROR    , 0                                                    , &nothing             , 0                     , nullUint                     );
 		/*  8 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ERROR    , 0                                                    , &nothing             , 0                     , nullUint                     );
 		/*  9 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ERROR    , 0                                                    , &nothing             , 0                     , nullUint                     );
+
 
 		// ARC for ([KEY SYM <-> -->]), brace open got already eaten
 		/* 10 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.TOKEN    , cast(uint)Token!EnumOperationType.EnumType.IDENTIFIER, &pushToken          , 10, Nullable!uint(11));
@@ -195,57 +200,82 @@ class Parser : AbstractParser!EnumOperationType {
 		/* 17 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.TOKEN    , cast(uint)Token!EnumOperationType.EnumType.IDENTIFIER, &pushVar          , 10, nullUint);
 		/* 18 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ERROR    , 0                                                    , &nothing             , 0                     , nullUint                     );
 		/* 19 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ERROR    , 0                                                    , &nothing             , 0                     , nullUint                     );
+
+		/* +10 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ERROR    , 0                                                    , &nothing             , 0                     , nullUint                     );
+		/* +11 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ERROR    , 0                                                    , &nothing             , 0                     , nullUint                     );
+		/* +12 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ERROR    , 0                                                    , &nothing             , 0                     , nullUint                     );
+		/* +13 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ERROR    , 0                                                    , &nothing             , 0                     , nullUint                     );
+		/* +14 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ERROR    , 0                                                    , &nothing             , 0                     , nullUint                     );
 		
-		const size_t MAINSEQUENCESTART = 20;
-		const size_t DICTIONARYSTART = 30;
+		/* +15 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ERROR    , 0                                                    , &nothing             , 0                     , nullUint                     );
+		/* +16 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ERROR    , 0                                                    , &nothing             , 0                     , nullUint                     );
+		/* +17 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ERROR    , 0                                                    , &nothing             , 0                     , nullUint                     );
+		/* +18 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ERROR    , 0                                                    , &nothing             , 0                     , nullUint                     );
+		/* +19 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ERROR    , 0                                                    , &nothing             , 0                     , nullUint                     );
+		
+
+		/* +20 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ERROR    , 0                                                    , &nothing             , 0                     , nullUint                     );
+		/* +21 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ERROR    , 0                                                    , &nothing             , 0                     , nullUint                     );
+		/* +22 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ERROR    , 0                                                    , &nothing             , 0                     , nullUint                     );
+		/* +23 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ERROR    , 0                                                    , &nothing             , 0                     , nullUint                     );
+		/* +24 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ERROR    , 0                                                    , &nothing             , 0                     , nullUint                     );
+		
+		/* +25 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ERROR    , 0                                                    , &nothing             , 0                     , nullUint                     );
+		/* +26 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ERROR    , 0                                                    , &nothing             , 0                     , nullUint                     );
+		/* +27 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ERROR    , 0                                                    , &nothing             , 0                     , nullUint                     );
+		/* +28 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ERROR    , 0                                                    , &nothing             , 0                     , nullUint                     );
+		/* +29 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ERROR    , 0                                                    , &nothing             , 0                     , nullUint                     );
+		
+		
 
 		// ARC which parses the main sequence (SYM --> SYM) ... |- (SYM --> SYM)    :NAME (...) ...
 		//  entry
 		assert(this.Arcs.length == MAINSEQUENCESTART);
-		/* 20 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.BRACEOPEN                , &beginBrace         , MAINSEQUENCESTART+2, Nullable!uint(MAINSEQUENCESTART+1));
-		/* 21 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.HALFH                    , &nothing         , MAINSEQUENCESTART+4, nullUint);
-		/* 22 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ARC      , 10                                                   , &nothing, MAINSEQUENCESTART+3, nullUint);
-		/* 23 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.NIL      , 0                                                    , &storeTokensToBraceAndAddToRule, MAINSEQUENCESTART, nullUint);
+		/* +0 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.BRACEOPEN                , &beginBrace         , MAINSEQUENCESTART+2, Nullable!uint(MAINSEQUENCESTART+1));
+		/* +1 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.HALFH                    , &nothing         , MAINSEQUENCESTART+4, nullUint);
+		/* +2 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ARC      , 10                                                   , &nothing, MAINSEQUENCESTART+3, nullUint);
+		/* +3 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.NIL      , 0                                                    , &storeTokensToBraceAndAddToRule, MAINSEQUENCESTART, nullUint);
 		
 		//  HALFH was read, this handles the 2nd part
-		/* 24 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.NIL      , 0                                                    , &setToTransformationResult         , MAINSEQUENCESTART+5, nullUint);
+		/* +4 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.NIL      , 0                                                    , &setToTransformationResult         , MAINSEQUENCESTART+5, nullUint);
 
-		// TODO
-		/* 25 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.BRACEOPEN                , &beginBrace         , MAINSEQUENCESTART+6, nullUint);
-		/* 26 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ARC      , 10                                                   , &nothing, MAINSEQUENCESTART+7, nullUint);
-		/* 27 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.NIL      , 0                                                    , &storeTokensToBraceAndAddToRule         , DICTIONARYSTART, nullUint);
+		/* +5 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.BRACEOPEN                , &beginBrace         , MAINSEQUENCESTART+6, nullUint);
+		/* +6 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ARC      , 10                                                   , &nothing, MAINSEQUENCESTART+7, nullUint);
+		/* +7 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.NIL      , 0                                                    , &storeTokensToBraceAndAddToRule         , DICTIONARYSTART, nullUint);
 
-		/* 28 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ERROR    , 0                                                    , &nothing             , 0                     , nullUint                     );
-		/* 29 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ERROR    , 0                                                    , &nothing             , 0                     , nullUint                     );
+		/* +8 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ERROR    , 0                                                    , &nothing             , 0                     , nullUint                     );
+		/* +9 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ERROR    , 0                                                    , &nothing             , 0                     , nullUint                     );
 		
 
 		assert(this.Arcs.length == DICTIONARYSTART);
 		//  the dictionary part is handled here
 		//    read the key and add a new element
-		/* 30 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.KEY                      , &addAndSetNewDictionaryElement         , DICTIONARYSTART+2, Nullable!uint(DICTIONARYSTART+1));
-		/* 31 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.END      , 0                                                    , &nothing,0, nullUint                   );
+		/* +0 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.KEY                      , &addAndSetNewDictionaryElement         , DICTIONARYSTART+2, Nullable!uint(DICTIONARYSTART+1));
+		/* +1 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.END      , 0                                                    , &nothing,0, nullUint                   );
 
 
 		// parse braces and brace content of key-value
-		/* 32 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.BRACEOPEN                , &nothing         , DICTIONARYSTART+3, nullUint);
-		/* 33 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ARC      , 40                                                   , &nothing, DICTIONARYSTART+4, nullUint);
-		/* 34 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.BRACECLOSE               , &nothing         , DICTIONARYSTART, nullUint);
+		/* +2 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.BRACEOPEN                , &nothing         , DICTIONARYSTART+3, nullUint);
+		/* +3 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ARC      , VALUEINBRACESTART                                                   , &nothing, DICTIONARYSTART+4, nullUint);
+		/* +4 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.BRACECLOSE               , &nothing         , DICTIONARYSTART, nullUint);
 
-		/* 35 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ERROR    , 0                                                    , &nothing             , 0                     , nullUint                     );
-		/* 36 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ERROR    , 0                                                    , &nothing             , 0                     , nullUint                     );
-		/* 37 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ERROR    , 0                                                    , &nothing             , 0                     , nullUint                     );
-		/* 38 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ERROR    , 0                                                    , &nothing             , 0                     , nullUint                     );
-		/* 39 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ERROR    , 0                                                    , &nothing             , 0                     , nullUint                     );
+		/* +5 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ERROR    , 0                                                    , &nothing             , 0                     , nullUint                     );
+		/* +6 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ERROR    , 0                                                    , &nothing             , 0                     , nullUint                     );
+		/* +7 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ERROR    , 0                                                    , &nothing             , 0                     , nullUint                     );
+		/* +8 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ERROR    , 0                                                    , &nothing             , 0                     , nullUint                     );
+		/* +9 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ERROR    , 0                                                    , &nothing             , 0                     , nullUint                     );
 		
-		//   read the value for the key inside the praces, braces got already read
-		/* 40 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.KEY                 , &storeKey, 40, Nullable!uint(41));
-		/* 41 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.BRACEOPEN                , &beginBrace         , 43,  Nullable!uint(42));
+
+		assert(this.Arcs.length == VALUEINBRACESTART);
+		//   read the value for the key inside the braces, braces got already read
+		/* 40 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.KEY                 , &storeKey, VALUEINBRACESTART+0, Nullable!uint(VALUEINBRACESTART+1));
+		/* 41 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.BRACEOPEN                , &beginBrace         , VALUEINBRACESTART+3,  Nullable!uint(VALUEINBRACESTART+2));
 		/* 42 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.END      , 0                                                    , &nothing,0, nullUint                   );
 
 		//     brace got opened
 		//     stores the data in the brace into the dictionary
-		/* 43 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ARC      , 10                                                   , &nothing, 44, nullUint);
-		/* 44 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.NIL      , 0                                                    , &storeTokensToBraceAndAddToDict         , 40, nullUint);
+		/* 43 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ARC      , 10                                                   , &nothing, VALUEINBRACESTART+4, nullUint);
+		/* 44 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.NIL      , 0                                                    , &storeTokensToBraceAndAddToDict         , VALUEINBRACESTART+0, nullUint);
 	}
 
 	override protected void setupBeforeParsing() {
@@ -555,14 +585,14 @@ lexer.setSource(
 #R[(M --> P) (S <-> M) |- (S --> P) :pre ((:!= S P)) :post (:t/analogy :d/strong :allow-backward)]""");
 	//*/
 
-	/+ TODO do this
+	/*
 	lexer.setSource(
 	"""
 	 #R[(S --> M) (P --> M) |- ((P --> $X) ==> (S --> $X)) :post (:t/abduction)
                                ]
-	"""
-	+/
-
+	""");
+	//*/
+	
 	/* uncommented because its in a crappy format, still TODO
 	lexer.setSource(
 	"""
