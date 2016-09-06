@@ -15,7 +15,7 @@ enum EnumOperationType {
 	INHERITANCE, // -->
 	IMPLCIATION, // ==>
 	HALFH, // |-
-	VAR, // $   TODO< rename to dependent or independent var
+	INDEPENDENTVAR, // $
 }
 
 class RuleLexer : Lexer!EnumOperationType {
@@ -68,7 +68,7 @@ class RuleLexer : Lexer!EnumOperationType {
 		}
 		else if( ruleIndex == 11 ) {
 			token.type = Token!EnumOperationType.EnumType.OPERATION;
-			token.contentOperation = EnumOperationType.VAR;
+			token.contentOperation = EnumOperationType.INDEPENDENTVAR;
 		}
 		else if( ruleIndex == 12 ) {
 			token.type = Token!EnumOperationType.EnumType.OPERATION;
@@ -101,7 +101,7 @@ import std.variant : Variant;
 
 struct TokenWithDecoration {
 	Token!EnumOperationType token;
-	bool isVariable;
+	bool isIndependentVariable;
 
 	static TokenWithDecoration makeToken(Token!EnumOperationType token) {
 		TokenWithDecoration result;
@@ -109,10 +109,10 @@ struct TokenWithDecoration {
 		return result;
 	}
 
-	static TokenWithDecoration makeVar(Token!EnumOperationType token) {
+	static TokenWithDecoration makeIndependentVar(Token!EnumOperationType token) {
 		TokenWithDecoration result;
 		result.token = token;
-		result.isVariable = true;
+		result.isIndependentVariable = true;
 		return result;
 	}
 }
@@ -136,8 +136,8 @@ class Parser : AbstractParser!EnumOperationType {
         	decoratedTokensInsideBrace ~= TokenWithDecoration.makeToken(currentToken);
 		}
 
-		void pushVar(AbstractParser!EnumOperationType parserObj, Token!EnumOperationType currentToken) {
-        	decoratedTokensInsideBrace ~= TokenWithDecoration.makeVar(currentToken);
+		void pushIndependentVar(AbstractParser!EnumOperationType parserObj, Token!EnumOperationType currentToken) {
+        	decoratedTokensInsideBrace ~= TokenWithDecoration.makeIndependentVar(currentToken);
 		}
 
 		void endBrace(AbstractParser!EnumOperationType parserObj, Token!EnumOperationType currentToken) {
@@ -196,8 +196,8 @@ class Parser : AbstractParser!EnumOperationType {
 		
 		/* 15 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.END      , 0                                                    , &nothing,0, nullUint                   );
 
-		/* 16 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.VAR                      , &nothing          , 17, Nullable!uint(14));
-		/* 17 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.TOKEN    , cast(uint)Token!EnumOperationType.EnumType.IDENTIFIER, &pushVar          , 10, nullUint);
+		/* 16 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.INDEPENDENTVAR                      , &nothing          , 17, Nullable!uint(14));
+		/* 17 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.TOKEN    , cast(uint)Token!EnumOperationType.EnumType.IDENTIFIER, &pushIndependentVar          , 10, nullUint);
 		/* 18 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ERROR    , 0                                                    , &nothing             , 0                     , nullUint                     );
 		/* 19 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ERROR    , 0                                                    , &nothing             , 0                     , nullUint                     );
 
