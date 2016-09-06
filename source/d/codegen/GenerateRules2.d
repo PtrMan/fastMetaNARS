@@ -14,6 +14,7 @@ enum EnumOperationType {
 	SIMILARITY, // <->
 	INHERITANCE, // -->
 	HALFH, // |-
+	VAR, // $
 }
 
 class RuleLexer : Lexer!EnumOperationType {
@@ -64,6 +65,11 @@ class RuleLexer : Lexer!EnumOperationType {
 			token.type = Token!EnumOperationType.EnumType.IDENTIFIER;
 			token.contentString = matchedString;
 		}
+		else if( ruleIndex == 11 ) {
+			token.type = Token!EnumOperationType.EnumType.OPERATION;
+			token.contentOperation = EnumOperationType.VAR;
+		}
+
 
 		return token;
 	}
@@ -80,13 +86,33 @@ class RuleLexer : Lexer!EnumOperationType {
 		tokenRules ~= Lexer!EnumOperationType.Rule(r"^(-->)");
 		tokenRules ~= Lexer!EnumOperationType.Rule(r"^(\|-)");
 		tokenRules ~= Lexer!EnumOperationType.Rule(r"^([a-zA-Z][0-9A-Za-z]*)");
+		tokenRules ~= Lexer!EnumOperationType.Rule(r"^\$");
+
 	}
 }
 
 import std.variant : Variant;
 
+struct TokenWithDecoration {
+	Token!EnumOperationType token;
+	bool isVariable;
+
+	static TokenWithDecoration makeToken(Token!EnumOperationType token) {
+		TokenWithDecoration result;
+		result.token = token;
+		return result;
+	}
+
+	static TokenWithDecoration makeVar(Token!EnumOperationType token) {
+		TokenWithDecoration result;
+		result.token = token;
+		result.isVariable = true;
+		return result;
+	}
+}
+
 class Parser : AbstractParser!EnumOperationType {
-	Token!EnumOperationType[] tokensInsideBrace;
+	TokenWithDecoration[] decoratedTokensInsideBrace;
 
 	override protected void fillArcs() {
 		void nothing(AbstractParser!EnumOperationType parserObj, Token!EnumOperationType currentToken) {
@@ -97,12 +123,15 @@ class Parser : AbstractParser!EnumOperationType {
 		}
 
 		void beginBrace(AbstractParser!EnumOperationType parserObj, Token!EnumOperationType currentToken) {
-        	tokensInsideBrace.length = 0;
+        	decoratedTokensInsideBrace.length = 0;
 		}
 
 		void pushToken(AbstractParser!EnumOperationType parserObj, Token!EnumOperationType currentToken) {
-        	//lastRule.lastBrace.tokens ~= currentToken;
-        	tokensInsideBrace ~= currentToken;
+        	decoratedTokensInsideBrace ~= TokenWithDecoration.makeToken(currentToken);
+		}
+
+		void pushVar(AbstractParser!EnumOperationType parserObj, Token!EnumOperationType currentToken) {
+        	decoratedTokensInsideBrace ~= TokenWithDecoration.makeVar(currentToken);
 		}
 
 		void endBrace(AbstractParser!EnumOperationType parserObj, Token!EnumOperationType currentToken) {
@@ -122,12 +151,12 @@ class Parser : AbstractParser!EnumOperationType {
 		}
 
 		void storeTokensToBraceAndAddToDict(AbstractParser!EnumOperationType parserObj, Token!EnumOperationType currentToken) {
-			lastRule.currentDictionaryEntry.content ~= Variant(new Brace(tokensInsideBrace));
+			lastRule.currentDictionaryEntry.content ~= Variant(new Brace(decoratedTokensInsideBrace));
 		}
 
 		void storeTokensToBraceAndAddToRule(AbstractParser!EnumOperationType parserObj, Token!EnumOperationType currentToken) {
 			lastRule.addBrace();
-			lastRule.lastBrace.tokens = tokensInsideBrace;
+			lastRule.lastBrace.tokensWithDecoration = decoratedTokensInsideBrace;
 		}
 
 		Nullable!uint nullUint;
@@ -150,14 +179,14 @@ class Parser : AbstractParser!EnumOperationType {
 		/* 10 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.TOKEN    , cast(uint)Token!EnumOperationType.EnumType.IDENTIFIER, &pushToken          , 10, Nullable!uint(11));
 		/* 11 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.KEY                      , &pushToken          , 10, Nullable!uint(12));
 		/* 12 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.SIMILARITY               , &pushToken          , 10, Nullable!uint(13));
-		/* 13 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.INHERITANCE              , &pushToken          , 10, Nullable!uint(14));
+		/* 13 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.INHERITANCE              , &pushToken          , 10, Nullable!uint(16));
 
 		/* 14 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.BRACECLOSE               , &endBrace         , 15, nullUint);
 		
 		/* 15 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.END      , 0                                                    , &nothing,0, nullUint                   );
 
-		/* 16 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.END      , 0                                                    , &nothing,0, nullUint                   );
-		/* 17 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.END      , 0                                                    , &nothing,0, nullUint                   );
+		/* 16 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.VAR                      , &nothing          , 17, Nullable!uint(14));
+		/* 17 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.TOKEN    , cast(uint)Token!EnumOperationType.EnumType.IDENTIFIER, &pushVar          , 10, nullUint);
 		/* 18 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ERROR    , 0                                                    , &nothing             , 0                     , nullUint                     );
 		/* 19 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ERROR    , 0                                                    , &nothing             , 0                     , nullUint                     );
 		
@@ -211,27 +240,27 @@ class Parser : AbstractParser!EnumOperationType {
    	}
 
    	public static class Brace {
-   		final this(Token!EnumOperationType[] tokens) {
-   			this.tokens = tokens;
+   		final this(TokenWithDecoration[] tokensWithDecoration) {
+   			this.tokensWithDecoration = tokensWithDecoration;
    		}
 
    		final this() {}
 
-   		Token!EnumOperationType[] tokens;
+   		TokenWithDecoration[] tokensWithDecoration;
 
    		final @property string leftIdentifier() {
-   			assert(tokens[0].type == Token!EnumOperationType.EnumType.IDENTIFIER);
-   			return tokens[0].contentString;
+   			assert(tokensWithDecoration[0].token.type == Token!EnumOperationType.EnumType.IDENTIFIER);
+   			return tokensWithDecoration[0].token.contentString;
    		}
 
    		final @property string rightIdentifier() {
-   			assert(tokens[2].type == Token!EnumOperationType.EnumType.IDENTIFIER);
-   			return tokens[2].contentString;
+   			assert(tokensWithDecoration[2].token.type == Token!EnumOperationType.EnumType.IDENTIFIER);
+   			return tokensWithDecoration[2].token.contentString;
    		}
 
    		final @property EnumOperationType operation() {
-   			assert(tokens[1].type == Token!EnumOperationType.EnumType.OPERATION);
-   			return tokens[1].contentOperation;
+   			assert(tokensWithDecoration[1].token.type == Token!EnumOperationType.EnumType.OPERATION);
+   			return tokensWithDecoration[1].token.contentOperation;
    		}
 
    	}
@@ -402,20 +431,20 @@ private RuleDescriptor[] translateParserRulesToRuleDescriptors(Parser.Rule[] par
 			Parser.DictionaryElement preDictionaryElement = iterationParserRule.attributeDictionary[":pre"];
 
 			foreach( iterationDictContent; preDictionaryElement.content ) {
-				if( iterationDictContent.convertsTo!(Parser.Brace) && iterationDictContent.get!(Parser.Brace).tokens.length != 0 ) {
-					Token!EnumOperationType firstToken = iterationDictContent.get!(Parser.Brace).tokens[0];
+				if( iterationDictContent.convertsTo!(Parser.Brace) && iterationDictContent.get!(Parser.Brace).tokensWithDecoration.length != 0 ) {
+					Token!EnumOperationType firstToken = iterationDictContent.get!(Parser.Brace).tokensWithDecoration[0].token;
 
-					bool isFirstTokenKey = (iterationDictContent.get!(Parser.Brace).tokens[0].type == Token!EnumOperationType.EnumType.OPERATION && firstToken.contentOperation == EnumOperationType.KEY );
+					bool isFirstTokenKey = (iterationDictContent.get!(Parser.Brace).tokensWithDecoration[0].token.type == Token!EnumOperationType.EnumType.OPERATION && firstToken.contentOperation == EnumOperationType.KEY );
 					bool isFirstTokenUnequal = firstToken.contentString == ":!=";
 					if( isFirstTokenKey && isFirstTokenUnequal ) {
 
-						assert(iterationDictContent.get!(Parser.Brace).tokens.length == 3);
-						assert(iterationDictContent.get!(Parser.Brace).tokens[1].type == Token!EnumOperationType.EnumType.IDENTIFIER);
-						assert(iterationDictContent.get!(Parser.Brace).tokens[2].type == Token!EnumOperationType.EnumType.IDENTIFIER);
+						assert(iterationDictContent.get!(Parser.Brace).tokensWithDecoration.length == 3);
+						assert(iterationDictContent.get!(Parser.Brace).tokensWithDecoration[1].token.type == Token!EnumOperationType.EnumType.IDENTIFIER);
+						assert(iterationDictContent.get!(Parser.Brace).tokensWithDecoration[2].token.type == Token!EnumOperationType.EnumType.IDENTIFIER);
 
 						string preConditionUnequalVariablennames[2];
-						preConditionUnequalVariablennames[0] = iterationDictContent.get!(Parser.Brace).tokens[1].contentString;
-						preConditionUnequalVariablennames[1] = iterationDictContent.get!(Parser.Brace).tokens[2].contentString;
+						preConditionUnequalVariablennames[0] = iterationDictContent.get!(Parser.Brace).tokensWithDecoration[1].token.contentString;
+						preConditionUnequalVariablennames[1] = iterationDictContent.get!(Parser.Brace).tokensWithDecoration[2].token.contentString;
 
 						EnumSource[2] sources;
 						sources[0] = findSource(iterationParserRule, preConditionUnequalVariablennames[0]);
