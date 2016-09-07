@@ -80,14 +80,21 @@ abstract class Parser(EnumOperationType) {
       for(;;) {
          writeln("ArcTableIndex ", ArcTableIndex);
 
-         switch( this.Arcs[ArcTableIndex].Type ) {
+         switch( this.Arcs[ArcTableIndex].Type ) with(Parser.Arc.EnumType) {
             ///// NIL
-            case Parser.Arc.EnumType.NIL:
-            ReturnValue = EnumRecursionReturn.OK;
+            case NIL:
+            // if the alternative is null we just go to next, if it is not null we follow the alternative
+            // we do this to simplify later rewriting of the rule(s)
+            if( this.Arcs[ArcTableIndex].Alternative.isNull() ) {
+               ReturnValue = EnumRecursionReturn.OK;
+            }
+            else {
+               ReturnValue = EnumRecursionReturn.BACKTRACK;
+            }
             break;
 
             ///// OPERATION
-            case Parser.Arc.EnumType.OPERATION:
+            case OPERATION:
             if( this.Arcs[ArcTableIndex].Info == this.CurrentToken.contentOperation ) {
                ReturnValue = EnumRecursionReturn.OK;
             }
@@ -97,7 +104,7 @@ abstract class Parser(EnumOperationType) {
             break;
 
             ///// TOKEN
-            case Parser.Arc.EnumType.TOKEN:
+            case TOKEN:
             if( this.Arcs[ArcTableIndex].Info == this.CurrentToken.type ) {
                ReturnValue = EnumRecursionReturn.OK;
             }
@@ -107,12 +114,12 @@ abstract class Parser(EnumOperationType) {
             break;
 
             ///// ARC
-            case Parser.Arc.EnumType.ARC:
+            case ARC:
             ReturnValue = this.parseRecursive(ErrorMessage, this.Arcs[ArcTableIndex].Info);
             break;
 
             ///// END
-            case Parser.Arc.EnumType.END:
+            case END:
 
             // TODO< check if we really are at the end of all tokens >
 
