@@ -4,6 +4,9 @@ import lang.Parser : AbstractParser = Parser;
 import lang.Token : Token;
 import lang.Lexer : Lexer;
 
+bool isOperation(const Token!EnumOperationType token, const EnumOperationType checkOperationType) {
+	return token.type == Token!EnumOperationType.EnumType.OPERATION && token.contentOperation == checkOperationType;
+}
 
 import ArrayStack;
 
@@ -89,13 +92,6 @@ class RuleLexer : Lexer!EnumOperationType {
 			token.type = Token!EnumOperationType.EnumType.OPERATION;
 			token.contentOperation = EnumOperationType.EQUIVALENCE;
 		}
-		/*
-		else if( ruleIndex == 15 ) {
-			token.type = Token!EnumOperationType.EnumType.OPERATION;
-			token.contentOperation = EnumOperationType.DEPENDENTVAR;
-			token.contentString = matchedString;
-		}*/
-
 
 		return token;
 	}
@@ -116,7 +112,6 @@ class RuleLexer : Lexer!EnumOperationType {
 		tokenRules ~= Lexer!EnumOperationType.Rule(r"^(==>)");
 		tokenRules ~= Lexer!EnumOperationType.Rule(r"^(&&)");
 		tokenRules ~= Lexer!EnumOperationType.Rule(r"^(<=>)");
-		//tokenRules ~= Lexer!EnumOperationType.Rule(r"^(\#[a-zA-Z][0-9A-Za-z]*)");
 	}
 }
 
@@ -185,7 +180,9 @@ class Parser : AbstractParser!EnumOperationType {
 		}
 
 		void beginBraceElement(AbstractParser!EnumOperationType parser, Token!EnumOperationType currentToken) {
-			elementsStack.push(Element.makeBrace());
+			Element createdElement = Element.makeBrace();
+			elementsStack.top.braceContent ~= createdElement;
+			elementsStack.push(createdElement);
 		}
 
 		void endBraceElement(AbstractParser!EnumOperationType parser, Token!EnumOperationType currentToken) {
@@ -271,7 +268,7 @@ class Parser : AbstractParser!EnumOperationType {
 		/* +12 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.TOKEN    , cast(uint)Token!EnumOperationType.EnumType.IDENTIFIER, &pushDependentVar          , SYLOGISMWITHOUTBRACESTART+0, nullUint);
 
 
-		/* +13 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.BRACEOPEN                , &beginBraceElement         , SYLOGISMWITHOUTBRACESTART+14, Nullable!uint(SYLOGISMWITHOUTBRACESTART+15));
+		/* +13 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.BRACEOPEN                , &nothing         , SYLOGISMWITHOUTBRACESTART+14, Nullable!uint(SYLOGISMWITHOUTBRACESTART+15));
 		/* +14 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ARC      , SYLOGISMSTART                                        , &nothing, SYLOGISMWITHOUTBRACESTART+0, nullUint);
 
 		/* +15 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.END      , 0                                                    , &nothing,0, nullUint                   );
@@ -303,6 +300,14 @@ class Parser : AbstractParser!EnumOperationType {
    			this.type = type;
    		}
 
+   		final @property bool isBrace() {
+   			return type == EnumType.BRACE;
+   		}
+
+   		final @property bool isTokenWithDecoration() {
+   			return type == EnumType.TOKENWITHDECORATION;
+   		}
+
 
    		final @property TokenWithDecoration tokenWithDecoration() {
    			assert(type == EnumType.TOKENWITHDECORATION);
@@ -330,6 +335,28 @@ class Parser : AbstractParser!EnumOperationType {
    			return braceContent[1].tokenWithDecoration.token.contentOperation;
    		}
 
+   		final void debugIt(uint depth) {
+   			string spaceTimes(uint times) {
+   				string result;
+   				foreach( i; 0..times ) {
+   					result ~= "   ";
+   				}
+   				return result;
+   			}
+
+   			import std.stdio;
+
+   			if( isTokenWithDecoration ) {
+   				writeln(spaceTimes(depth), "token");
+   			}
+   			else {
+   				writeln(spaceTimes(depth), "brace");
+   				foreach( iterationChildren; braceContent ) {
+   					iterationChildren.debugIt(depth+1);
+   				}
+   			}
+   		}
+
    	}
 
    	public static class DictionaryElement {
@@ -337,22 +364,29 @@ class Parser : AbstractParser!EnumOperationType {
    	}
 
    	public static class Rule {
-   		public enum EnumType {
-   			BEFORE,
-   			AFTER
-   		}
-
-   		EnumType type;
-
    		Element rootElement;
 
-   		final @property Element[] elementsBeforeHalfh() {
-   			assert(false, "TODO");	
-   		} 
-
-   		final @property Element[] elementsAfterHalfh() {
-   			assert(false, "TODO");
+   		final @property Element[] elementsBeforeHalfH() {
+   			return rootElement.braceContent[0..halfHIndex];
    		}
+
+   		private final @property Element[] elementsAfterHalfH() {
+   			return rootElement.braceContent[halfHIndex+1..$];
+   		}
+
+   		// finds out where half-h is and determines the root-element and index for the part after it
+   		final void cache() {
+   			// scan for half-h
+   			import std.algorithm.searching : find;
+   			auto findHaystack = find!(a => !a.isBrace && a.tokenWithDecoration.token.isOperation(EnumOperationType.HALFH))(rootElement.braceContent);
+   			assert(findHaystack.length != 0, "half-h wasn't found!");
+   			halfHIndex = rootElement.braceContent.length-findHaystack.length;
+   			
+   			import std.stdio;
+   			writeln("DEBUG rootat[0] = ", elementsAfterHalfH.length == 1);
+   		}
+
+   		private size_t halfHIndex;
    	}
 
    	// helper for parser actions
@@ -584,11 +618,16 @@ void main() {
 	Parser parser = new Parser();
 
 	// testing area
-	/*
+	//*
 	{
 	lexer.setSource(
 	"""
-	#R[(S --> M) (P --> M) |- (((P --> $X) ==> (S --> $X)) :post (:t/abduction))]""");
+	 #R[(S --> M) (P --> M) |- (((P --> $X) ==> (S --> $X)) :post (:t/abduction)
+                                      ((S --> $X) ==> (P --> $X)) :post (:t/induction)
+                                      ((P --> $X) <=> (S --> $X)) :post (:t/comparison)
+                                      (&& (S --> #Y) (P --> #Y)) :post (:t/intersection))
+                                          :pre (:belief? (:!= S P))]
+	""");
 	}
 	//*/
 
@@ -613,7 +652,7 @@ lexer.setSource(
 	""");
 	//*/
 	
-	//* uncommented because its in a crappy format, still TODO
+	/* uncommented because its in a crappy format, still TODO
 	lexer.setSource(
 	"""
 	 #R[(S --> M) (P --> M) |- (((P --> $X) ==> (S --> $X)) :post (:t/abduction)
@@ -637,6 +676,13 @@ lexer.setSource(
 
 		return;
 	}
+
+	// cache all rules
+	foreach( iterationRule; parser.rules ) {
+		iterationRule.cache();
+	}
+
+	parser.rules[0].rootElement.debugIt(0);
 
 
 	//RuleDescriptor[] ruleDescriptors = translateParserRulesToRuleDescriptors(parser.rules);
