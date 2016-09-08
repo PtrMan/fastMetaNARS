@@ -390,14 +390,6 @@ class Parser : AbstractParser!EnumOperationType {
    	public Rule[] rules;
 }
 
-enum EnumSource {
-	ALEFT,
-	ARIGHT,
-	BLEFT,
-	BRIGHT,
-}
-
-
 
 struct FlagsOfCopula {
 	bool flagInheritanceToLeft, flagInheritanceToRight;
@@ -418,6 +410,13 @@ class RuleResultWithPostconditionAndTruth {
 }
 
 struct RuleDescriptor {
+	enum EnumSource {
+		ALEFT,
+		ARIGHT,
+		BLEFT,
+		BRIGHT,
+	}
+
 	RuleResultWithPostconditionAndTruth[] ruleResultWithPostconditionAndTruth;
 
 	Tuple!(EnumSource, EnumSource)[] toMatchInputTerms; // pairs of the sources which need to match that the rule fires 
@@ -437,18 +436,18 @@ private RuleDescriptor translateParserRuleToRuleDescriptor(Parser.Rule parserRul
 	}
 
 	void innerFnFindCommonCompoundTerms() {
-		Tuple!(string, EnumSource)[] leftMatching;
-		leftMatching ~= Tuple!(string, EnumSource)(parserRule.elementsBeforeHalfH[0].leftIdentifier, EnumSource.ALEFT);
-		leftMatching ~= Tuple!(string, EnumSource)(parserRule.elementsBeforeHalfH[0].rightIdentifier, EnumSource.ARIGHT);
+		Tuple!(string, RuleDescriptor.EnumSource)[] leftMatching;
+		leftMatching ~= Tuple!(string, RuleDescriptor.EnumSource)(parserRule.elementsBeforeHalfH[0].leftIdentifier, RuleDescriptor.EnumSource.ALEFT);
+		leftMatching ~= Tuple!(string, RuleDescriptor.EnumSource)(parserRule.elementsBeforeHalfH[0].rightIdentifier, RuleDescriptor.EnumSource.ARIGHT);
 
-		Tuple!(string, EnumSource)[] rightMatching;
-		rightMatching ~= Tuple!(string, EnumSource)(parserRule.elementsBeforeHalfH[1].leftIdentifier, EnumSource.BLEFT);
-		rightMatching ~= Tuple!(string, EnumSource)(parserRule.elementsBeforeHalfH[1].rightIdentifier, EnumSource.BRIGHT);
+		Tuple!(string, RuleDescriptor.EnumSource)[] rightMatching;
+		rightMatching ~= Tuple!(string, RuleDescriptor.EnumSource)(parserRule.elementsBeforeHalfH[1].leftIdentifier, RuleDescriptor.EnumSource.BLEFT);
+		rightMatching ~= Tuple!(string, RuleDescriptor.EnumSource)(parserRule.elementsBeforeHalfH[1].rightIdentifier, RuleDescriptor.EnumSource.BRIGHT);
 
 		foreach( iterationLeftMatching; leftMatching ) {
 			foreach( iterationRightMatching; rightMatching ) {
 				if( iterationLeftMatching[0] == iterationRightMatching[0] ) {
-					resultRuleDescriptor.toMatchInputTerms ~= Tuple!(EnumSource, EnumSource)(iterationLeftMatching[1], iterationRightMatching[1]);				
+					resultRuleDescriptor.toMatchInputTerms ~= Tuple!(RuleDescriptor.EnumSource, RuleDescriptor.EnumSource)(iterationLeftMatching[1], iterationRightMatching[1]);				
 				}
 			}
 		}
