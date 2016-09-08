@@ -187,7 +187,7 @@ class Parser : AbstractParser!EnumOperationType {
 		assert(this.Arcs.length == SYLOGISMSTART);
 
 		// ARC for ([KEY SYM SYLOGISM $VAR]), brace open got already eaten
-		/* + 0 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.BRACEOPEN                , &beginBraceElement         , SYLOGISMSTART+1, Nullable!uint());
+		/* + 0 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.NIL, 0                , &beginBraceElement         , SYLOGISMSTART+1, nullUint);
 		/* + 1 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ARC      , SYLOGISMWITHOUTBRACESTART                                        , &nothing, SYLOGISMSTART+2, nullUint);
 		/* + 2 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.BRACECLOSE               , &endBraceElement         , SYLOGISMSTART+3, nullUint);
 		/* + 3 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.END      , 0                                                    , &nothing,0, nullUint                   );
@@ -537,7 +537,7 @@ void main() {
 
 	// this is just for testing the parser
 	//*
-	lexer.setSource("#R[(M --> P) |-  (A --> C) :pre]"); // (M --> S) |- (S <-> P)]");
+	lexer.setSource("#R[(M --> P) |-  (A --> C) :pre (:!=)]"); // (M --> S) |- (S <-> P)]");
 	//*/
 
 	//lexer.setSource("""
