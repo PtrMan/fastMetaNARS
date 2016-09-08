@@ -138,24 +138,6 @@ class Parser : AbstractParser!EnumOperationType {
         	elementsStack = [rules.top.rootElement];
 		}
 
-		/* uncommente because its the old code for the handling of not nested tokens 
-		void beginBrace(AbstractParser!EnumOperationType parserObj, Token!EnumOperationType currentToken) {
-        	decoratedTokensInsideBrace.length = 0;
-		}
-
-		void pushToken(AbstractParser!EnumOperationType parserObj, Token!EnumOperationType currentToken) {
-        	decoratedTokensInsideBrace ~= TokenWithDecoration.makeToken(currentToken);
-		}
-
-		void pushIndependentVar(AbstractParser!EnumOperationType parserObj, Token!EnumOperationType currentToken) {
-        	decoratedTokensInsideBrace ~= TokenWithDecoration.makeIndependentVar(currentToken);
-		}
-
-		void endBrace(AbstractParser!EnumOperationType parserObj, Token!EnumOperationType currentToken) {
-
-		}
-		*/
-
 		void beginBraceElement(AbstractParser!EnumOperationType parser, Token!EnumOperationType currentToken) {
 			elementsStack.push(Element.makeBrace());
 		}
@@ -172,28 +154,6 @@ class Parser : AbstractParser!EnumOperationType {
         	topElement.braceContent ~= Element.makeTokenWithDecoration(TokenWithDecoration.makeIndependentVar(currentToken));
 		}
 
-		/*
-		void setToTransformationResult(AbstractParser!EnumOperationType parserObj, Token!EnumOperationType currentToken) {
-        	lastRule.type = Rule.EnumType.AFTER;
-		}
-
-		void addAndSetNewDictionaryElement(AbstractParser!EnumOperationType parserObj, Token!EnumOperationType currentToken) {
-			lastRule.attributeDictionaryCurrentkey = currentToken.contentString;
-			lastRule.attributeDictionary[lastRule.attributeDictionaryCurrentkey] = new DictionaryElement();
-		}
-
-		void storeKey(AbstractParser!EnumOperationType parserObj, Token!EnumOperationType currentToken) {
-			lastRule.currentDictionaryEntry.content ~= Variant(currentToken.contentString);
-		}
-
-		void storeTokensToBraceAndAddToDict(AbstractParser!EnumOperationType parserObj, Token!EnumOperationType currentToken) {
-			lastRule.currentDictionaryEntry.content ~= Variant(new Element(decoratedTokensInsideBrace));
-		}
-
-		void addElementToRule(AbstractParser!EnumOperationType parserObj, Token!EnumOperationType currentToken) {
-			lastRule.addElement(topElement);
-			elementsStack.pop();
-		}*/
 
 		Nullable!uint nullUint;
 
@@ -201,9 +161,6 @@ class Parser : AbstractParser!EnumOperationType {
 
 		const size_t SYLOGISMSTART = 10;
 		const size_t SYLOGISMWITHOUTBRACESTART = 20;
-		//const size_t MAINSEQUENCESTART = 40;
-		//const size_t DICTIONARYSTART = 50;
-		//const size_t VALUEINBRACESTART = 60;
 
 		// Tree
 
@@ -266,62 +223,6 @@ class Parser : AbstractParser!EnumOperationType {
 		/* +14 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ARC      , SYLOGISMSTART                                        , &nothing, SYLOGISMWITHOUTBRACESTART+0, nullUint);
 
 		/* +15 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.END      , 0                                                    , &nothing,0, nullUint                   );
-		
-		
-		
-		/+
-		// ARC which parses the main sequence made out of braces, variables, half-h, etc
-		//  entry
-		assert(this.Arcs.length == MAINSEQUENCESTART);
-
-
-
-		/* +0 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.BRACEOPEN                , &beginBraceElement         , MAINSEQUENCESTART+2, Nullable!uint(MAINSEQUENCESTART+1));
-		/* +1 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.HALFH                    , &nothing         , MAINSEQUENCESTART+4, nullUint);
-		/* +2 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ARC      , SYLOGISMSTART                                        , &nothing, MAINSEQUENCESTART+3, nullUint);
-		/* +3 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.NIL      , 0                                                    , &addElementToRule, MAINSEQUENCESTART, nullUint);
-		
-		//  HALFH was read, this handles the 2nd part
-		/* +4 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.NIL      , 0                                                    , &setToTransformationResult         , MAINSEQUENCESTART+5, nullUint);
-
-		/* +5 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.BRACEOPEN                , &beginBrace         , MAINSEQUENCESTART+6, nullUint);
-		/* +6 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ARC      , SYLOGISMSTART                                        , &nothing, MAINSEQUENCESTART+7, nullUint);
-		/* +7 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.NIL      , 0                                                    , &addElementToRule         , DICTIONARYSTART, nullUint);
-
-		/* +8 */this.Arcs ~= errorArc;
-		/* +9 */this.Arcs ~= errorArc;
-		
-
-		assert(this.Arcs.length == DICTIONARYSTART);
-		//  the dictionary part is handled here
-		//    read the key and add a new element
-		/* +0 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.KEY                      , &addAndSetNewDictionaryElement         , DICTIONARYSTART+2, Nullable!uint(DICTIONARYSTART+1));
-		/* +1 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.END      , 0                                                    , &nothing,0, nullUint                   );
-
-
-		// parse braces and brace content of key-value
-		/* +2 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.BRACEOPEN                , &nothing         , DICTIONARYSTART+3, nullUint);
-		/* +3 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ARC      , VALUEINBRACESTART                                                   , &nothing, DICTIONARYSTART+4, nullUint);
-		/* +4 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.BRACECLOSE               , &nothing         , DICTIONARYSTART, nullUint);
-
-		/* +5 */this.Arcs ~= errorArc;
-		/* +6 */this.Arcs ~= errorArc;
-		/* +7 */this.Arcs ~= errorArc;
-		/* +8 */this.Arcs ~= errorArc;
-		/* +9 */this.Arcs ~= errorArc;
-		
-
-		assert(this.Arcs.length == VALUEINBRACESTART);
-		//   read the value for the key inside the braces, braces got already read
-		/* 40 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.KEY                 , &storeKey, VALUEINBRACESTART+0, Nullable!uint(VALUEINBRACESTART+1));
-		/* 41 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.BRACEOPEN                , &beginBrace         , VALUEINBRACESTART+3,  Nullable!uint(VALUEINBRACESTART+2));
-		/* 42 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.END      , 0                                                    , &nothing,0, nullUint                   );
-
-		//     brace got opened
-		//     stores the data in the brace into the dictionary
-		/* 43 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ARC      , SYLOGISMSTART                                        , &nothing, VALUEINBRACESTART+4, nullUint);
-		/* 44 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.NIL      , 0                                                    , &storeTokensToBraceAndAddToDict         , VALUEINBRACESTART+0, nullUint);
-		+/
 	}
 
 	override protected void setupBeforeParsing() {
