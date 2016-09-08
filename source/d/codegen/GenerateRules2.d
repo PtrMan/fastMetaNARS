@@ -4,6 +4,9 @@ import lang.Parser : AbstractParser = Parser;
 import lang.Token : Token;
 import lang.Lexer : Lexer;
 
+
+import ArrayStack;
+
 enum EnumOperationType {
 	BRACEOPEN,
 	BRACECLOSE,
@@ -99,7 +102,6 @@ class RuleLexer : Lexer!EnumOperationType {
 
 import std.variant : Variant;
 
-import ArrayStack;
 
 struct TokenWithDecoration {
 	Token!EnumOperationType token;
@@ -166,16 +168,17 @@ class Parser : AbstractParser!EnumOperationType {
 
 		// parses the main sequence made out of braces, variables, half-h, etc
 
-		/* +  0 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ARC      , 2                                                    , &nothing, 0, Nullable!uint(1));
-		/* +  1 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.END      , 0                                                    , &nothing,0, nullUint                   );
+		/* +  0 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.POUNDKEY             , &nothing       , 1, Nullable!uint(5));
+		/* +  1 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.TOKEN    , cast(uint)Token!EnumOperationType.EnumType.IDENTIFIER, &nothing          , 2, nullUint);
+		/* +  2 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.BRACKETOPEN             , &beginRule       , 3, nullUint);
 
-		/* +  3 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.BRACKETOPEN             , &beginRule       , 1, Nullable!uint(4));
-		/* +  3 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.BRACKETCLOSE             , &nothing       , 1, Nullable!uint(4));
-		/* +  4 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ARC      , SYLOGISMSTART                                                    , &nothing, 3, nullUint);
+		/* +  3 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.BRACKETCLOSE             , &nothing       , 0, Nullable!uint(4));
+		/* +  4 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ARC      , SYLOGISMWITHOUTBRACESTART                                                    , &nothing, 3, nullUint);
 
 		// TODO< set a flag in SYLOGISMWITHOUTBRACESTART if it didn't match anything and check for it here, then check it here and if its not set then it means that there was an parsing error
 
-		/* +  5 */this.Arcs ~= errorArc;
+		/* +  5 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.END      , 0                                                    , &nothing,1, nullUint                   );
+		
 		/* +  6 */this.Arcs ~= errorArc;
 		/* +  7 */this.Arcs ~= errorArc;
 		/* +  8 */this.Arcs ~= errorArc;
@@ -534,7 +537,7 @@ void main() {
 
 	// this is just for testing the parser
 	//*
-	lexer.setSource("#R[(M --> P) (M --> S) |- (S <-> P)]");
+	lexer.setSource("#R[(M --> P) |-  (A --> C) :pre]"); // (M --> S) |- (S <-> P)]");
 	//*/
 
 	//lexer.setSource("""
