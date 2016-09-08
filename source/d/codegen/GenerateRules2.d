@@ -72,6 +72,7 @@ class RuleLexer : Lexer!EnumOperationType {
 		else if( ruleIndex == 11 ) {
 			token.type = Token!EnumOperationType.EnumType.OPERATION;
 			token.contentOperation = EnumOperationType.INDEPENDENTVAR;
+			token.contentString = matchedString;
 		}
 		else if( ruleIndex == 12 ) {
 			token.type = Token!EnumOperationType.EnumType.OPERATION;
@@ -95,7 +96,7 @@ class RuleLexer : Lexer!EnumOperationType {
 		tokenRules ~= Lexer!EnumOperationType.Rule(r"^(-->)");
 		tokenRules ~= Lexer!EnumOperationType.Rule(r"^(\|-)");
 		tokenRules ~= Lexer!EnumOperationType.Rule(r"^([a-zA-Z][0-9A-Za-z]*)");
-		tokenRules ~= Lexer!EnumOperationType.Rule(r"^\$");
+		tokenRules ~= Lexer!EnumOperationType.Rule(r"^(\$[a-zA-Z][0-9A-Za-z]*)");
 		tokenRules ~= Lexer!EnumOperationType.Rule(r"^(==>)");
 	}
 }
@@ -207,8 +208,8 @@ class Parser : AbstractParser!EnumOperationType {
 
 		/* + 0 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.TOKEN    , cast(uint)Token!EnumOperationType.EnumType.IDENTIFIER, &addTokenToBrace          , SYLOGISMWITHOUTBRACESTART+0, Nullable!uint(SYLOGISMWITHOUTBRACESTART+1));
 		/* + 1 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.KEY                      , &addTokenToBrace          , SYLOGISMWITHOUTBRACESTART+0, Nullable!uint(SYLOGISMWITHOUTBRACESTART+2));
-		/* + 2 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.INDEPENDENTVAR           , &nothing            , SYLOGISMWITHOUTBRACESTART+3, Nullable!uint(SYLOGISMWITHOUTBRACESTART+4));
-		/* + 3 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.TOKEN    , cast(uint)Token!EnumOperationType.EnumType.IDENTIFIER, &pushIndependentVar , SYLOGISMWITHOUTBRACESTART+0, nullUint);
+		/* + 2 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.INDEPENDENTVAR           , &pushIndependentVar            , SYLOGISMWITHOUTBRACESTART+0, Nullable!uint(SYLOGISMWITHOUTBRACESTART+3));
+		/* + 3 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.NIL, 0                , &nothing         , SYLOGISMWITHOUTBRACESTART+4, nullUint);
 		/* + 4 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.SIMILARITY               , &addTokenToBrace          , SYLOGISMWITHOUTBRACESTART+0, Nullable!uint(SYLOGISMWITHOUTBRACESTART+5));
 
 		/* + 5 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.INHERITANCE              , &addTokenToBrace          , SYLOGISMWITHOUTBRACESTART+0, Nullable!uint(SYLOGISMWITHOUTBRACESTART+6));
@@ -537,7 +538,8 @@ void main() {
 
 	// this is just for testing the parser
 	//*
-	lexer.setSource("#R[(M --> P) |-  (A --> C) :pre (:!=)]"); // (M --> S) |- (S <-> P)]");
+	lexer.setSource("#R[(S --> M) (P --> M) |- ((P --> $X) ==> (S --> $X)) :post (:t/abduction)]");
+	//lexer.setSource("#R[(S --> M) (P --> M) |- ((P --> $X) ==> (S --> $X)) :post (:t/abduction)]");
 	//*/
 
 	//lexer.setSource("""
