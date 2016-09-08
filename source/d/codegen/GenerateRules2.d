@@ -160,6 +160,88 @@ struct TokenWithDecoration {
 	}
 }
 
+class Element {
+	enum EnumType {
+		TOKENWITHDECORATION,
+		BRACE,
+	}
+
+	static Element makeTokenWithDecoration(TokenWithDecoration tokenWithDecoration) {
+		Element result = new Element(EnumType.TOKENWITHDECORATION);
+		result.protectedTokenWithDecoration = tokenWithDecoration;
+		return result;
+	}
+
+	static Element makeBrace() {
+		Element result = new Element(EnumType.BRACE);
+		return result;
+	}
+
+	protected EnumType type;
+
+	final protected this(EnumType type) {
+		this.type = type;
+	}
+
+	final @property bool isBrace() {
+		return type == EnumType.BRACE;
+	}
+
+	final @property bool isTokenWithDecoration() {
+		return type == EnumType.TOKENWITHDECORATION;
+	}
+
+
+	final @property TokenWithDecoration tokenWithDecoration() {
+		assert(type == EnumType.TOKENWITHDECORATION);
+		return protectedTokenWithDecoration;
+	}
+
+	protected TokenWithDecoration protectedTokenWithDecoration;
+	Element[] braceContent; // without accessor because im not sure if the array can be manipulated like an reference if we pass it outside
+	                        // TODO< investigate this >
+
+
+
+	final @property string leftIdentifier() {
+		assert(braceContent[0].tokenWithDecoration.token.type == Token!EnumOperationType.EnumType.IDENTIFIER);
+		return braceContent[0].tokenWithDecoration.token.contentString;
+	}
+
+	final @property string rightIdentifier() {
+		assert(braceContent[2].tokenWithDecoration.token.type == Token!EnumOperationType.EnumType.IDENTIFIER);
+		return braceContent[2].tokenWithDecoration.token.contentString;
+	}
+
+	final @property EnumOperationType operation() {
+		assert(braceContent[1].tokenWithDecoration.token.type == Token!EnumOperationType.EnumType.OPERATION);
+		return braceContent[1].tokenWithDecoration.token.contentOperation;
+	}
+
+	final void debugIt(uint depth) {
+		string spaceTimes(uint times) {
+			string result;
+			foreach( i; 0..times ) {
+				result ~= "   ";
+			}
+			return result;
+		}
+
+		import std.stdio;
+
+		if( isTokenWithDecoration ) {
+			writeln(spaceTimes(depth), "token");
+		}
+		else {
+			writeln(spaceTimes(depth), "brace");
+			foreach( iterationChildren; braceContent ) {
+				iterationChildren.debugIt(depth+1);
+			}
+		}
+	}
+
+}
+
 class Parser : AbstractParser!EnumOperationType {
 	Element[] elementsStack;
 
@@ -277,92 +359,6 @@ class Parser : AbstractParser!EnumOperationType {
 	override protected void setupBeforeParsing() {
    	}
 
-   	public static class Element {
-   		enum EnumType {
-   			TOKENWITHDECORATION,
-   			BRACE,
-   		}
-
-   		static Element makeTokenWithDecoration(TokenWithDecoration tokenWithDecoration) {
-   			Element result = new Element(EnumType.TOKENWITHDECORATION);
-   			result.protectedTokenWithDecoration = tokenWithDecoration;
-   			return result;
-   		}
-
-   		static Element makeBrace() {
-   			Element result = new Element(EnumType.BRACE);
-   			return result;
-   		}
-
-   		protected EnumType type;
-
-   		final protected this(EnumType type) {
-   			this.type = type;
-   		}
-
-   		final @property bool isBrace() {
-   			return type == EnumType.BRACE;
-   		}
-
-   		final @property bool isTokenWithDecoration() {
-   			return type == EnumType.TOKENWITHDECORATION;
-   		}
-
-
-   		final @property TokenWithDecoration tokenWithDecoration() {
-   			assert(type == EnumType.TOKENWITHDECORATION);
-   			return protectedTokenWithDecoration;
-   		}
-
-   		protected TokenWithDecoration protectedTokenWithDecoration;
-   		Element[] braceContent; // without accessor because im not sure if the array can be manipulated like an reference if we pass it outside
-   		                        // TODO< investigate this >
-
-
-
-   		final @property string leftIdentifier() {
-   			assert(braceContent[0].tokenWithDecoration.token.type == Token!EnumOperationType.EnumType.IDENTIFIER);
-   			return braceContent[0].tokenWithDecoration.token.contentString;
-   		}
-
-   		final @property string rightIdentifier() {
-   			assert(braceContent[0].tokenWithDecoration.token.type == Token!EnumOperationType.EnumType.IDENTIFIER);
-   			return braceContent[0].tokenWithDecoration.token.contentString;
-   		}
-
-   		final @property EnumOperationType operation() {
-   			assert(braceContent[1].tokenWithDecoration.token.type == Token!EnumOperationType.EnumType.OPERATION);
-   			return braceContent[1].tokenWithDecoration.token.contentOperation;
-   		}
-
-   		final void debugIt(uint depth) {
-   			string spaceTimes(uint times) {
-   				string result;
-   				foreach( i; 0..times ) {
-   					result ~= "   ";
-   				}
-   				return result;
-   			}
-
-   			import std.stdio;
-
-   			if( isTokenWithDecoration ) {
-   				writeln(spaceTimes(depth), "token");
-   			}
-   			else {
-   				writeln(spaceTimes(depth), "brace");
-   				foreach( iterationChildren; braceContent ) {
-   					iterationChildren.debugIt(depth+1);
-   				}
-   			}
-   		}
-
-   	}
-
-   	public static class DictionaryElement {
-   		public Variant[] content;
-   	}
-
    	public static class Rule {
    		Element rootElement;
 
@@ -381,9 +377,6 @@ class Parser : AbstractParser!EnumOperationType {
    			auto findHaystack = find!(a => !a.isBrace && a.tokenWithDecoration.token.isOperation(EnumOperationType.HALFH))(rootElement.braceContent);
    			assert(findHaystack.length != 0, "half-h wasn't found!");
    			halfHIndex = rootElement.braceContent.length-findHaystack.length;
-   			
-   			import std.stdio;
-   			writeln("DEBUG rootat[0] = ", elementsAfterHalfH.length == 1);
    		}
 
    		private size_t halfHIndex;
@@ -410,27 +403,85 @@ struct FlagsOfCopula {
 	bool flagInheritanceToLeft, flagInheritanceToRight;
 }
 
-struct RuleDescriptor {
-	final this(EnumSource sourceLeft, EnumSource sourceRight, FlagsOfCopula flagsOfSourceCopula[2], FlagsOfCopula flagsOfTargetCopula, string rule) {
-		this.sourceLeft = sourceLeft;
-		this.sourceRight = sourceRight;
-		this.flagsOfSourceCopula = flagsOfSourceCopula;
-		this.flagsOfTargetCopula = flagsOfTargetCopula;
-		this.rule = rule;
+struct Postcondition {
+	string truthfunction;
+}
+
+class RuleResultWithPostconditionAndTruth {
+	Element resultTransformationElement;
+	Postcondition postcondition;
+
+	final this(Element resultTransformationElement, Postcondition postcondition) {
+		this.resultTransformationElement = resultTransformationElement;
+		this.postcondition = postcondition;
 	}
+}
 
-	EnumSource sourceLeft, sourceRight;
-	FlagsOfCopula flagsOfSourceCopula[2];
-	FlagsOfCopula flagsOfTargetCopula;
-	string rule;
+struct RuleDescriptor {
+	RuleResultWithPostconditionAndTruth[] ruleResultWithPostconditionAndTruth;
 
-	Nullable!(EnumSource[2]) preconditionUnequal; // is the translated precondition
-	
 	Tuple!(EnumSource, EnumSource)[] toMatchInputTerms; // pairs of the sources which need to match that the rule fires 
 };
 
 import std.stdio;
 
+
+private RuleDescriptor translateParserRuleToRuleDescriptor(Parser.Rule parserRule) {
+	assert(parserRule.elementsBeforeHalfH.length == 2, "The count of premises must be two!");
+
+	RuleDescriptor resultRuleDescriptor;
+
+	// handles the root element as if it were an dictionary and returns the "value" of the "key"
+	static Element innerFnHandleElementAsDictionaryAndGetValueByKey(const Element root, const string key) {
+		assert(false, "TODO");
+	}
+
+	void innerFnFindCommonCompoundTerms() {
+		Tuple!(string, EnumSource)[] leftMatching;
+		leftMatching ~= Tuple!(string, EnumSource)(parserRule.elementsBeforeHalfH[0].leftIdentifier, EnumSource.ALEFT);
+		leftMatching ~= Tuple!(string, EnumSource)(parserRule.elementsBeforeHalfH[0].rightIdentifier, EnumSource.ARIGHT);
+
+		Tuple!(string, EnumSource)[] rightMatching;
+		rightMatching ~= Tuple!(string, EnumSource)(parserRule.elementsBeforeHalfH[1].leftIdentifier, EnumSource.BLEFT);
+		rightMatching ~= Tuple!(string, EnumSource)(parserRule.elementsBeforeHalfH[1].rightIdentifier, EnumSource.BRIGHT);
+
+		foreach( iterationLeftMatching; leftMatching ) {
+			foreach( iterationRightMatching; rightMatching ) {
+				if( iterationLeftMatching[0] == iterationRightMatching[0] ) {
+					resultRuleDescriptor.toMatchInputTerms ~= Tuple!(EnumSource, EnumSource)(iterationLeftMatching[1], iterationRightMatching[1]);				
+				}
+			}
+		}
+	}
+
+	static RuleResultWithPostconditionAndTruth innerFnConvertElementsOfResultWithPostconditionAndTruthToDescriptor(Element[] elements) {
+		assert(elements.length == 3);
+
+		if( elements[1].tokenWithDecoration.token.contentString != ":post" ) {
+			throw new Exception(":post expected at [1]!");
+		}
+
+		static Postcondition innerFnConvertPostconditionToDescriptor(Element element) {
+			Postcondition resultPostcondition;
+			resultPostcondition.truthfunction = element.tokenWithDecoration.token.contentString;
+			return resultPostcondition;
+		}
+
+		return new RuleResultWithPostconditionAndTruth(elements[0], innerFnConvertPostconditionToDescriptor(elements[2]));
+	}
+
+	innerFnFindCommonCompoundTerms();
+
+
+	assert((parserRule.elementsAfterHalfH[0].braceContent.length % 3) == 0, "Number of Elements after half-h must be devisible by 3, because structure is <postCompound :post postConditions>");
+
+	for( size_t childElementIndex = 0; childElementIndex < parserRule.elementsAfterHalfH[0].braceContent.length; childElementIndex += 3) {
+		resultRuleDescriptor.ruleResultWithPostconditionAndTruth ~= innerFnConvertElementsOfResultWithPostconditionAndTruthToDescriptor(parserRule.elementsAfterHalfH[0].braceContent[childElementIndex..childElementIndex+3]);
+	}
+
+	return resultRuleDescriptor;
+
+}
 
 /+ uncommented 08.09.2016 because it needs an overhaul to account for the new clojure like parsing
 
@@ -618,7 +669,7 @@ void main() {
 	Parser parser = new Parser();
 
 	// testing area
-	//*
+	/*
 	{
 	lexer.setSource(
 	"""
@@ -652,7 +703,7 @@ lexer.setSource(
 	""");
 	//*/
 	
-	/* uncommented because its in a crappy format, still TODO
+	//* uncommented because its in a crappy format, still TODO
 	lexer.setSource(
 	"""
 	 #R[(S --> M) (P --> M) |- (((P --> $X) ==> (S --> $X)) :post (:t/abduction)
@@ -693,6 +744,7 @@ lexer.setSource(
 
 // generates the target code (currently C++) for the "deriver"(which currently just does some pretty basic things)
 
+/+ uncommented 09.09.2016 because overhaul and a language independent interface(now for D) is needed
 string generateCodeCppForDeriver(RuleDescriptor[] ruleDescriptors) {
 	// the signature of the generate function is
 	const string signature = "vector<UnifiedTerm> derive(ReasonerInstance &reasonerInstance, vector<UnifiedTermIndex> &leftPathTermIndices, vector<UnifiedTermIndex> &rightPathTermIndices, float k)";
@@ -847,5 +899,6 @@ string generateCodeCppForDeriver(RuleDescriptor[] ruleDescriptors) {
 
 	return generated;
 }
++/
 
 // TODO< translate precondition >
