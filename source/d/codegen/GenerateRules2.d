@@ -99,6 +99,8 @@ class RuleLexer : Lexer!EnumOperationType {
 
 import std.variant : Variant;
 
+import ArrayStack;
+
 struct TokenWithDecoration {
 	Token!EnumOperationType token;
 	bool isIndependentVariable;
@@ -118,7 +120,13 @@ struct TokenWithDecoration {
 }
 
 class Parser : AbstractParser!EnumOperationType {
-	TokenWithDecoration[] decoratedTokensInsideBrace;
+	Element[] elementsStack;
+
+	protected final @property Element topElement() {
+   		return elementsStack.top;
+   	}
+
+
 
 	override protected void fillArcs() {
 		void nothing(AbstractParser!EnumOperationType parserObj, Token!EnumOperationType currentToken) {
@@ -126,8 +134,11 @@ class Parser : AbstractParser!EnumOperationType {
 
 		void beginRule(AbstractParser!EnumOperationType parserObj, Token!EnumOperationType currentToken) {
         	rules ~= new Rule();
+        	rules.top.rootElement = Element.makeBrace();
+        	elementsStack = [rules.top.rootElement];
 		}
 
+		/* uncommente because its the old code for the handling of not nested tokens 
 		void beginBrace(AbstractParser!EnumOperationType parserObj, Token!EnumOperationType currentToken) {
         	decoratedTokensInsideBrace.length = 0;
 		}
@@ -141,8 +152,27 @@ class Parser : AbstractParser!EnumOperationType {
 		}
 
 		void endBrace(AbstractParser!EnumOperationType parserObj, Token!EnumOperationType currentToken) {
+
+		}
+		*/
+
+		void beginBraceElement(AbstractParser!EnumOperationType parser, Token!EnumOperationType currentToken) {
+			elementsStack.push(Element.makeBrace());
 		}
 
+		void endBraceElement(AbstractParser!EnumOperationType parser, Token!EnumOperationType currentToken) {
+			elementsStack.pop();
+		}
+
+		void addTokenToBrace(AbstractParser!EnumOperationType parserObj, Token!EnumOperationType currentToken) {
+        	topElement.braceContent ~= Element.makeTokenWithDecoration(TokenWithDecoration.makeToken(currentToken));
+		}
+
+		void pushIndependentVar(AbstractParser!EnumOperationType parserObj, Token!EnumOperationType currentToken) {
+        	topElement.braceContent ~= Element.makeTokenWithDecoration(TokenWithDecoration.makeIndependentVar(currentToken));
+		}
+
+		/*
 		void setToTransformationResult(AbstractParser!EnumOperationType parserObj, Token!EnumOperationType currentToken) {
         	lastRule.type = Rule.EnumType.AFTER;
 		}
@@ -157,96 +187,106 @@ class Parser : AbstractParser!EnumOperationType {
 		}
 
 		void storeTokensToBraceAndAddToDict(AbstractParser!EnumOperationType parserObj, Token!EnumOperationType currentToken) {
-			lastRule.currentDictionaryEntry.content ~= Variant(new Brace(decoratedTokensInsideBrace));
+			lastRule.currentDictionaryEntry.content ~= Variant(new Element(decoratedTokensInsideBrace));
 		}
 
-		void storeTokensToBraceAndAddToRule(AbstractParser!EnumOperationType parserObj, Token!EnumOperationType currentToken) {
-			lastRule.addBrace();
-			lastRule.lastBrace.tokensWithDecoration = decoratedTokensInsideBrace;
-		}
+		void addElementToRule(AbstractParser!EnumOperationType parserObj, Token!EnumOperationType currentToken) {
+			lastRule.addElement(topElement);
+			elementsStack.pop();
+		}*/
 
 		Nullable!uint nullUint;
 
 		Arc errorArc = new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ERROR    , 0                                                    , &nothing             , 0                     , nullUint                     );
 
 		const size_t SYLOGISMSTART = 10;
-		const size_t MAINSEQUENCESTART = 40;
-		const size_t DICTIONARYSTART = 50;
-		const size_t VALUEINBRACESTART = 60;
+		const size_t SYLOGISMWITHOUTBRACESTART = 20;
+		//const size_t MAINSEQUENCESTART = 40;
+		//const size_t DICTIONARYSTART = 50;
+		//const size_t VALUEINBRACESTART = 60;
 
 		// Tree
-		/*  0 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ARC      , 2                                                    , &nothing, 0, Nullable!uint(1));
-		/*  1 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.END      , 0                                                    , &nothing,0, nullUint                   );
 
-		/*  2 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.POUNDKEY                 , &beginRule         , 3, nullUint);
-		/*  3 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.TOKEN    , cast(uint)Token!EnumOperationType.EnumType.IDENTIFIER, &nothing           , 4, nullUint);
-		/*  4 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.BRACKETOPEN              , &nothing       , 5, nullUint);
-		/*  5 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ARC      , MAINSEQUENCESTART  , &nothing, 6, nullUint);
-		/*  6 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.BRACKETCLOSE             , &nothing       , 1, nullUint);
+		// parses the main sequence made out of braces, variables, half-h, etc
 
-		/*  7 */this.Arcs ~= errorArc;
-		/*  8 */this.Arcs ~= errorArc;
-		/*  9 */this.Arcs ~= errorArc;
+		/* +  0 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ARC      , 2                                                    , &nothing, 0, Nullable!uint(1));
+		/* +  1 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.END      , 0                                                    , &nothing,0, nullUint                   );
 
+		/* +  3 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.BRACKETOPEN             , &beginRule       , 1, Nullable!uint(4));
+		/* +  3 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.BRACKETCLOSE             , &nothing       , 1, Nullable!uint(4));
+		/* +  4 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ARC      , SYLOGISMSTART                                                    , &nothing, 3, nullUint);
 
-		// ARC for ([KEY SYM SYLOGISM $VAR]), brace open got already eaten
-		// SYLOGISM can be <-> --> ==> and so on
+		// TODO< set a flag in SYLOGISMWITHOUTBRACESTART if it didn't match anything and check for it here, then check it here and if its not set then it means that there was an parsing error
+
+		/* +  5 */this.Arcs ~= errorArc;
+		/* +  6 */this.Arcs ~= errorArc;
+		/* +  7 */this.Arcs ~= errorArc;
+		/* +  8 */this.Arcs ~= errorArc;
+		/* +  9 */this.Arcs ~= errorArc;
 
 		assert(this.Arcs.length == SYLOGISMSTART);
 
-		/* + 0 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.TOKEN    , cast(uint)Token!EnumOperationType.EnumType.IDENTIFIER, &pushToken          , SYLOGISMSTART+0, Nullable!uint(SYLOGISMSTART+1));
-		/* + 1 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.KEY                      , &pushToken          , SYLOGISMSTART+0, Nullable!uint(SYLOGISMSTART+2));
-		/* + 2 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.INDEPENDENTVAR           , &nothing            , SYLOGISMSTART+3, Nullable!uint(SYLOGISMSTART+4));
-		/* + 3 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.TOKEN    , cast(uint)Token!EnumOperationType.EnumType.IDENTIFIER, &pushIndependentVar , SYLOGISMSTART+0, nullUint);
-		/* + 4 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.SIMILARITY               , &pushToken          , SYLOGISMSTART+0, Nullable!uint(SYLOGISMSTART+5));
+		// ARC for ([KEY SYM SYLOGISM $VAR]), brace open got already eaten
+		/* + 0 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.BRACEOPEN                , &beginBraceElement         , SYLOGISMSTART+1, Nullable!uint());
+		/* + 1 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ARC      , SYLOGISMWITHOUTBRACESTART                                        , &nothing, SYLOGISMSTART+2, nullUint);
+		/* + 2 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.BRACECLOSE               , &endBraceElement         , SYLOGISMSTART+3, nullUint);
+		/* + 3 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.END      , 0                                                    , &nothing,0, nullUint                   );
 
-		/* + 5 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.INHERITANCE              , &pushToken          , SYLOGISMSTART+0, Nullable!uint(SYLOGISMSTART+6));
-		/* + 6 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.IMPLCIATION              , &pushToken          , SYLOGISMSTART+0, Nullable!uint(SYLOGISMSTART+7));
-		/* + 7 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.NIL, 0                                                          , &nothing          , SYLOGISMSTART+0, Nullable!uint(SYLOGISMSTART+8));
-		/* + 8 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.NIL, 0                                                          , &nothing          , SYLOGISMSTART+0, Nullable!uint(SYLOGISMSTART+9));
-		/* + 9 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.NIL, 0                                                          , &nothing          , SYLOGISMSTART+0, Nullable!uint(SYLOGISMSTART+10));
+		this.Arcs ~= errorArc;
+
+		this.Arcs ~= errorArc;
+		this.Arcs ~= errorArc;
+		this.Arcs ~= errorArc;
+		this.Arcs ~= errorArc;
+		this.Arcs ~= errorArc;
+
+		// ARC for [KEY SYM SYLOGISM $VAR]
+		// SYLOGISM can be <-> --> ==> and so on
+
+		assert(this.Arcs.length == SYLOGISMWITHOUTBRACESTART);
+
+		/* + 0 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.TOKEN    , cast(uint)Token!EnumOperationType.EnumType.IDENTIFIER, &addTokenToBrace          , SYLOGISMWITHOUTBRACESTART+0, Nullable!uint(SYLOGISMWITHOUTBRACESTART+1));
+		/* + 1 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.KEY                      , &addTokenToBrace          , SYLOGISMWITHOUTBRACESTART+0, Nullable!uint(SYLOGISMWITHOUTBRACESTART+2));
+		/* + 2 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.INDEPENDENTVAR           , &nothing            , SYLOGISMWITHOUTBRACESTART+3, Nullable!uint(SYLOGISMWITHOUTBRACESTART+4));
+		/* + 3 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.TOKEN    , cast(uint)Token!EnumOperationType.EnumType.IDENTIFIER, &pushIndependentVar , SYLOGISMWITHOUTBRACESTART+0, nullUint);
+		/* + 4 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.SIMILARITY               , &addTokenToBrace          , SYLOGISMWITHOUTBRACESTART+0, Nullable!uint(SYLOGISMWITHOUTBRACESTART+5));
+
+		/* + 5 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.INHERITANCE              , &addTokenToBrace          , SYLOGISMWITHOUTBRACESTART+0, Nullable!uint(SYLOGISMWITHOUTBRACESTART+6));
+		/* + 6 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.IMPLCIATION              , &addTokenToBrace          , SYLOGISMWITHOUTBRACESTART+0, Nullable!uint(SYLOGISMWITHOUTBRACESTART+7));
+		/* + 7 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.HALFH                    , &addTokenToBrace          , SYLOGISMWITHOUTBRACESTART+0, Nullable!uint(SYLOGISMWITHOUTBRACESTART+8));
+		/* + 8 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.KEY                      , &addTokenToBrace         , SYLOGISMWITHOUTBRACESTART+0, Nullable!uint(SYLOGISMWITHOUTBRACESTART+9));
+		/* + 9 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.NIL, 0                                                          , &nothing          , SYLOGISMWITHOUTBRACESTART+0, Nullable!uint(SYLOGISMWITHOUTBRACESTART+10));
 		
-		/* +10 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.NIL, 0                                                          , &nothing          , SYLOGISMSTART+0, Nullable!uint(SYLOGISMSTART+11));
-		/* +11 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.NIL, 0                                                          , &nothing          , SYLOGISMSTART+0, Nullable!uint(SYLOGISMSTART+12));
-		/* +12 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.NIL, 0                                                          , &nothing          , SYLOGISMSTART+0, Nullable!uint(SYLOGISMSTART+13));
-		/* +13 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.NIL, 0                                                          , &nothing          , SYLOGISMSTART+0, Nullable!uint(SYLOGISMSTART+14));
-		/* +14 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.NIL, 0                                                          , &nothing          , SYLOGISMSTART+0, Nullable!uint(SYLOGISMSTART+15));
+		/* +10 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.NIL, 0                                                          , &nothing          , SYLOGISMWITHOUTBRACESTART+0, Nullable!uint(SYLOGISMWITHOUTBRACESTART+11));
+		/* +11 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.NIL, 0                                                          , &nothing          , SYLOGISMWITHOUTBRACESTART+0, Nullable!uint(SYLOGISMWITHOUTBRACESTART+12));
+		/* +12 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.NIL, 0                                                          , &nothing          , SYLOGISMWITHOUTBRACESTART+0, Nullable!uint(SYLOGISMWITHOUTBRACESTART+13));
 
-		/* +15 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.BRACECLOSE               , &endBrace         , SYLOGISMSTART+16, nullUint);
-		/* +16 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.END      , 0                                                    , &nothing,0, nullUint                   );
 
-		/* +17 */this.Arcs ~= errorArc;
-		/* +18 */this.Arcs ~= errorArc;
-		/* +19 */this.Arcs ~= errorArc;
+		/* +13 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.BRACEOPEN                , &beginBraceElement         , SYLOGISMWITHOUTBRACESTART+14, Nullable!uint(SYLOGISMWITHOUTBRACESTART+15));
+		/* +14 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ARC      , SYLOGISMSTART                                        , &nothing, SYLOGISMWITHOUTBRACESTART+0, nullUint);
 
-		/* +20 */this.Arcs ~= errorArc;
-		/* +21 */this.Arcs ~= errorArc;
-		/* +22 */this.Arcs ~= errorArc;
-		/* +23 */this.Arcs ~= errorArc;
-		/* +24 */this.Arcs ~= errorArc;
-		
-		/* +25 */this.Arcs ~= errorArc;
-		/* +26 */this.Arcs ~= errorArc;
-		/* +27 */this.Arcs ~= errorArc;
-		/* +28 */this.Arcs ~= errorArc;
-		/* +29 */this.Arcs ~= errorArc;
+		/* +15 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.END      , 0                                                    , &nothing,0, nullUint                   );
 		
 		
-
-		// ARC which parses the main sequence (SYM --> SYM) ... |- (SYM --> SYM)    :NAME (...) ...
+		
+		/+
+		// ARC which parses the main sequence made out of braces, variables, half-h, etc
 		//  entry
 		assert(this.Arcs.length == MAINSEQUENCESTART);
-		/* +0 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.BRACEOPEN                , &beginBrace         , MAINSEQUENCESTART+2, Nullable!uint(MAINSEQUENCESTART+1));
+
+
+
+		/* +0 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.BRACEOPEN                , &beginBraceElement         , MAINSEQUENCESTART+2, Nullable!uint(MAINSEQUENCESTART+1));
 		/* +1 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.HALFH                    , &nothing         , MAINSEQUENCESTART+4, nullUint);
 		/* +2 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ARC      , SYLOGISMSTART                                        , &nothing, MAINSEQUENCESTART+3, nullUint);
-		/* +3 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.NIL      , 0                                                    , &storeTokensToBraceAndAddToRule, MAINSEQUENCESTART, nullUint);
+		/* +3 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.NIL      , 0                                                    , &addElementToRule, MAINSEQUENCESTART, nullUint);
 		
 		//  HALFH was read, this handles the 2nd part
 		/* +4 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.NIL      , 0                                                    , &setToTransformationResult         , MAINSEQUENCESTART+5, nullUint);
 
 		/* +5 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.OPERATION, cast(uint)EnumOperationType.BRACEOPEN                , &beginBrace         , MAINSEQUENCESTART+6, nullUint);
 		/* +6 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ARC      , SYLOGISMSTART                                        , &nothing, MAINSEQUENCESTART+7, nullUint);
-		/* +7 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.NIL      , 0                                                    , &storeTokensToBraceAndAddToRule         , DICTIONARYSTART, nullUint);
+		/* +7 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.NIL      , 0                                                    , &addElementToRule         , DICTIONARYSTART, nullUint);
 
 		/* +8 */this.Arcs ~= errorArc;
 		/* +9 */this.Arcs ~= errorArc;
@@ -281,33 +321,60 @@ class Parser : AbstractParser!EnumOperationType {
 		//     stores the data in the brace into the dictionary
 		/* 43 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.ARC      , SYLOGISMSTART                                        , &nothing, VALUEINBRACESTART+4, nullUint);
 		/* 44 */this.Arcs ~= new Arc(AbstractParser!EnumOperationType.Arc.EnumType.NIL      , 0                                                    , &storeTokensToBraceAndAddToDict         , VALUEINBRACESTART+0, nullUint);
+		+/
 	}
 
 	override protected void setupBeforeParsing() {
    	}
 
-   	public static class Brace {
-   		final this(TokenWithDecoration[] tokensWithDecoration) {
-   			this.tokensWithDecoration = tokensWithDecoration;
+   	public static class Element {
+   		enum EnumType {
+   			TOKENWITHDECORATION,
+   			BRACE,
    		}
 
-   		final this() {}
+   		static Element makeTokenWithDecoration(TokenWithDecoration tokenWithDecoration) {
+   			Element result = new Element(EnumType.TOKENWITHDECORATION);
+   			result.protectedTokenWithDecoration = tokenWithDecoration;
+   			return result;
+   		}
 
-   		TokenWithDecoration[] tokensWithDecoration;
+   		static Element makeBrace() {
+   			Element result = new Element(EnumType.BRACE);
+   			return result;
+   		}
+
+   		protected EnumType type;
+
+   		final protected this(EnumType type) {
+   			this.type = type;
+   		}
+
+
+   		final @property TokenWithDecoration tokenWithDecoration() {
+   			assert(type == EnumType.TOKENWITHDECORATION);
+   			return protectedTokenWithDecoration;
+   		}
+
+   		protected TokenWithDecoration protectedTokenWithDecoration;
+   		Element[] braceContent; // without accessor because im not sure if the array can be manipulated like an reference if we pass it outside
+   		                        // TODO< investigate this >
+
+
 
    		final @property string leftIdentifier() {
-   			assert(tokensWithDecoration[0].token.type == Token!EnumOperationType.EnumType.IDENTIFIER);
-   			return tokensWithDecoration[0].token.contentString;
+   			assert(braceContent[0].tokenWithDecoration.token.type == Token!EnumOperationType.EnumType.IDENTIFIER);
+   			return braceContent[0].tokenWithDecoration.token.contentString;
    		}
 
    		final @property string rightIdentifier() {
-   			assert(tokensWithDecoration[2].token.type == Token!EnumOperationType.EnumType.IDENTIFIER);
-   			return tokensWithDecoration[2].token.contentString;
+   			assert(braceContent[0].tokenWithDecoration.token.type == Token!EnumOperationType.EnumType.IDENTIFIER);
+   			return braceContent[0].tokenWithDecoration.token.contentString;
    		}
 
    		final @property EnumOperationType operation() {
-   			assert(tokensWithDecoration[1].token.type == Token!EnumOperationType.EnumType.OPERATION);
-   			return tokensWithDecoration[1].token.contentOperation;
+   			assert(braceContent[1].tokenWithDecoration.token.type == Token!EnumOperationType.EnumType.OPERATION);
+   			return braceContent[1].tokenWithDecoration.token.contentOperation;
    		}
 
    	}
@@ -324,37 +391,19 @@ class Parser : AbstractParser!EnumOperationType {
 
    		EnumType type;
 
-   		Brace[] bracesBefore;
-   		Brace[] bracesAfter;
+   		Element rootElement;
 
-   		DictionaryElement[string] attributeDictionary;
-   		string attributeDictionaryCurrentkey;
+   		final @property Element[] elementsBeforeHalfh() {
+   			assert(false, "TODO");	
+   		} 
 
-   		// helper for parser actions
-   		final @property Brace lastBrace() {
-   			if( type == EnumType.BEFORE ) {
-   				return bracesBefore[$-1];
-   			}
-   			return bracesAfter[$-1];
-   		}
-
-   		// helper for partser actions
-   		final void addBrace() {
-   			if( type == EnumType.BEFORE ) {
-   				bracesBefore ~= new Brace();
-   			}
-   			else {
-   				bracesAfter ~= new Brace();
-   			}
-   		}
-
-   		final @property DictionaryElement currentDictionaryEntry() {
-   			return attributeDictionary[attributeDictionaryCurrentkey];
+   		final @property Element[] elementsAfterHalfh() {
+   			assert(false, "TODO");
    		}
    	}
 
    	// helper for parser actions
-   	protected @property Rule lastRule() {
+   	protected final @property Rule lastRule() {
    		return rules[$-1];
    	}
 
@@ -395,6 +444,9 @@ struct RuleDescriptor {
 
 import std.stdio;
 
+
+/+ uncommented 08.09.2016 because it needs an overhaul to account for the new clojure like parsing
+
 private RuleDescriptor[] translateParserRulesToRuleDescriptors(Parser.Rule[] parserRules) {
 	string getTruthFunction(Parser.DictionaryElement dictionaryElement) {
 		foreach( iterationContent; dictionaryElement.content ) {
@@ -426,16 +478,16 @@ private RuleDescriptor[] translateParserRulesToRuleDescriptors(Parser.Rule[] par
 
 	// tries to find the variablenname on the left side of half-h
 	EnumSource findSource(Parser.Rule rule, string variablenname) {
-		if( rule.bracesBefore[0].leftIdentifier == variablenname ) {
+		if( rule.elementsBefore[0].leftIdentifier == variablenname ) {
 			return EnumSource.ALEFT;
 		}
-		else if( rule.bracesBefore[0].rightIdentifier == variablenname ) {
+		else if( rule.elementsBefore[0].rightIdentifier == variablenname ) {
 			return EnumSource.ARIGHT;
 		}
-		else if( rule.bracesBefore[1].leftIdentifier == variablenname ) {
+		else if( rule.elementsBefore[1].leftIdentifier == variablenname ) {
 			return EnumSource.BLEFT;
 		}
-		else if( rule.bracesBefore[1].rightIdentifier == variablenname ) {
+		else if( rule.elementsBefore[1].rightIdentifier == variablenname ) {
 			return EnumSource.BRIGHT;
 		}
 		else {
@@ -459,17 +511,17 @@ private RuleDescriptor[] translateParserRulesToRuleDescriptors(Parser.Rule[] par
 	foreach( iterationParserRule; parserRules ) {
 		writeln(iterationParserRule.attributeDictionary.keys);
 
-		writeln(iterationParserRule.bracesBefore.length, " ", iterationParserRule.bracesAfter.length);
+		writeln(iterationParserRule.elementsBefore.length, " ", iterationParserRule.elementsAfter.length);
 
 		string cppTruthFunctionEnum = translateTruthFunctionToCppEnum(getTruthFunction(iterationParserRule.attributeDictionary[":post"]));
 
-		EnumSource sourceLeft = findSource(iterationParserRule, iterationParserRule.bracesAfter[0].leftIdentifier);
-		EnumSource sourceRight = findSource(iterationParserRule, iterationParserRule.bracesAfter[0].rightIdentifier);
+		EnumSource sourceLeft = findSource(iterationParserRule, iterationParserRule.elementsAfter[0].leftIdentifier);
+		EnumSource sourceRight = findSource(iterationParserRule, iterationParserRule.elementsAfter[0].rightIdentifier);
 
 		FlagsOfCopula flagsOfSourceCopula[2];
-		flagsOfSourceCopula[0] = translateOperationToCopola(iterationParserRule.bracesBefore[0].operation);
-		flagsOfSourceCopula[1] = translateOperationToCopola(iterationParserRule.bracesBefore[1].operation);
-		FlagsOfCopula flagsOfTargetCopula = translateOperationToCopola(iterationParserRule.bracesAfter[0].operation);
+		flagsOfSourceCopula[0] = translateOperationToCopola(iterationParserRule.elementsBefore[0].operation);
+		flagsOfSourceCopula[1] = translateOperationToCopola(iterationParserRule.elementsBefore[1].operation);
+		FlagsOfCopula flagsOfTargetCopula = translateOperationToCopola(iterationParserRule.elementsAfter[0].operation);
 
 		RuleDescriptor ruleDescriptorToAdd = RuleDescriptor(sourceLeft, sourceRight, flagsOfSourceCopula, flagsOfTargetCopula, cppTruthFunctionEnum);
 
@@ -478,20 +530,20 @@ private RuleDescriptor[] translateParserRulesToRuleDescriptors(Parser.Rule[] par
 			Parser.DictionaryElement preDictionaryElement = iterationParserRule.attributeDictionary[":pre"];
 
 			foreach( iterationDictContent; preDictionaryElement.content ) {
-				if( iterationDictContent.convertsTo!(Parser.Brace) && iterationDictContent.get!(Parser.Brace).tokensWithDecoration.length != 0 ) {
-					Token!EnumOperationType firstToken = iterationDictContent.get!(Parser.Brace).tokensWithDecoration[0].token;
+				if( iterationDictContent.convertsTo!(Parser.Element) && iterationDictContent.get!(Parser.Element).braceContent.length != 0 ) {
+					Token!EnumOperationType firstToken = iterationDictContent.get!(Parser.Element).braceContent[0].tokenWithDecoration;
 
-					bool isFirstTokenKey = (iterationDictContent.get!(Parser.Brace).tokensWithDecoration[0].token.type == Token!EnumOperationType.EnumType.OPERATION && firstToken.contentOperation == EnumOperationType.KEY );
+					bool isFirstTokenKey = iterationDictContent.get!(Parser.Element).braceContent[0].tokenWithDecoration.token.type == Token!EnumOperationType.EnumType.OPERATION && firstToken.contentOperation == EnumOperationType.KEY;
 					bool isFirstTokenUnequal = firstToken.contentString == ":!=";
 					if( isFirstTokenKey && isFirstTokenUnequal ) {
 
-						assert(iterationDictContent.get!(Parser.Brace).tokensWithDecoration.length == 3);
-						assert(iterationDictContent.get!(Parser.Brace).tokensWithDecoration[1].token.type == Token!EnumOperationType.EnumType.IDENTIFIER);
-						assert(iterationDictContent.get!(Parser.Brace).tokensWithDecoration[2].token.type == Token!EnumOperationType.EnumType.IDENTIFIER);
+						assert(iterationDictContent.get!(Parser.Element).braceContent.length == 3);
+						assert(iterationDictContent.get!(Parser.Element).braceContent[1].tokenWithDecoration.token.type == Token!EnumOperationType.EnumType.IDENTIFIER);
+						assert(iterationDictContent.get!(Parser.Element).braceContent[2].tokenWithDecoration.token.type == Token!EnumOperationType.EnumType.IDENTIFIER);
 
 						string preConditionUnequalVariablennames[2];
-						preConditionUnequalVariablennames[0] = iterationDictContent.get!(Parser.Brace).tokensWithDecoration[1].token.contentString;
-						preConditionUnequalVariablennames[1] = iterationDictContent.get!(Parser.Brace).tokensWithDecoration[2].token.contentString;
+						preConditionUnequalVariablennames[0] = iterationDictContent.get!(Parser.Element).braceContent[1].tokenWithDecoration.token.contentString;
+						preConditionUnequalVariablennames[1] = iterationDictContent.get!(Parser.Element).braceContent[2].tokenWithDecoration.token.contentString;
 
 						EnumSource[2] sources;
 						sources[0] = findSource(iterationParserRule, preConditionUnequalVariablennames[0]);
@@ -507,12 +559,12 @@ private RuleDescriptor[] translateParserRulesToRuleDescriptors(Parser.Rule[] par
 		// find common left side term thingies
 
 		Tuple!(string, EnumSource)[] leftMatching;
-		leftMatching ~= Tuple!(string, EnumSource)(iterationParserRule.bracesBefore[0].leftIdentifier, EnumSource.ALEFT);
-		leftMatching ~= Tuple!(string, EnumSource)(iterationParserRule.bracesBefore[0].rightIdentifier, EnumSource.ARIGHT);
+		leftMatching ~= Tuple!(string, EnumSource)(iterationParserRule.elementsBefore[0].leftIdentifier, EnumSource.ALEFT);
+		leftMatching ~= Tuple!(string, EnumSource)(iterationParserRule.elementsBefore[0].rightIdentifier, EnumSource.ARIGHT);
 
 		Tuple!(string, EnumSource)[] rightMatching;
-		rightMatching ~= Tuple!(string, EnumSource)(iterationParserRule.bracesBefore[1].leftIdentifier, EnumSource.BLEFT);
-		rightMatching ~= Tuple!(string, EnumSource)(iterationParserRule.bracesBefore[1].rightIdentifier, EnumSource.BRIGHT);
+		rightMatching ~= Tuple!(string, EnumSource)(iterationParserRule.elementsBefore[1].leftIdentifier, EnumSource.BLEFT);
+		rightMatching ~= Tuple!(string, EnumSource)(iterationParserRule.elementsBefore[1].rightIdentifier, EnumSource.BRIGHT);
 
 		foreach( iterationLeftMatching; leftMatching ) {
 			foreach( iterationRightMatching; rightMatching ) {
@@ -530,6 +582,7 @@ private RuleDescriptor[] translateParserRulesToRuleDescriptors(Parser.Rule[] par
 
 
 }
++/
 
 
 
@@ -577,13 +630,16 @@ void main() {
 	RuleLexer lexer = new RuleLexer();
 	Parser parser = new Parser();
 
-	//lexer.setSource("#R[(S --> P) (S <-> P) |- (S --> P) :post (:t/struct-int :p/belief) :pre (:question?)]");
-	
+
+	// this is just for testing the parser
+	//*
+	lexer.setSource("#R[(M --> P) (M --> S) |- (S <-> P)]");
+	//*/
 
 	//lexer.setSource("""
 //#R[(A --> B) (B --> C) |- (A --> C) :pre ((:!= A C)) :post (:t/deduction :d/strong :allow-backward)]""");
 
-	//* uncommented 06.09.2016, worked, just want to experiment with variables below
+	/* uncommented 06.09.2016, worked, just want to experiment with variables below
 lexer.setSource(
 """
 #R[(M --> P) (M --> S) |- (S <-> P) :post (:t/comparison :d/weak :allow-backward) :pre ((:!= S P))]
@@ -624,9 +680,8 @@ lexer.setSource(
 	}
 
 
-	RuleDescriptor[] ruleDescriptors = translateParserRulesToRuleDescriptors(parser.rules);
-
-	writeln(generateCodeCppForDeriver(ruleDescriptors));
+	//RuleDescriptor[] ruleDescriptors = translateParserRulesToRuleDescriptors(parser.rules);
+	//writeln(generateCodeCppForDeriver(ruleDescriptors));
 }
 
 
