@@ -997,22 +997,44 @@ string generateCodeForDeriver(CodegenDelegates delegates, CodegenStringTemplates
 		}
 	}
 
+	string delegate(Element element) nestedFnGetCodeOfCompoundCreationRecursivly;
+
 	string nestedFnGetStringOfBinaryCompoundCreationRecursivly(Element leftSideElement, Element copulaElement, Element rightSideElement) {
 		string copulaAsString = delegates.convertFlagsOfCopulaToFlags(convertCopulaElementToFlagsOfCopula(copulaElement));
 
-		assert(false, "TODO TODO TODO");
-		// TODO TODO TODO TODO< check if it are compounds and recursivly call nestedFnGetStringOfCompundCreationRecursivly if its the case
-		// else we check if it is an premise variable, if it is the case we generate the code for accessing it >
-		string leftSideAsString = delegates.getPremiseVariableForSource(getSourceOfPremiseVariableByName(leftSideElement.tokenWithDecoration.token.contentString));
-		string rightSideAsString = delegates.getPremiseVariableForSource(getSourceOfPremiseVariableByName(rightSideElement.tokenWithDecoration.token.contentString));
+		string leftSideAsString, rightSideAsString;
 
+		// check if it are compounds and recursivly call nestedFnGetStringOfCompundCreationRecursivly if its the case
+		// else we check if it is an premise variable, if it is the case we generate the code for accessing it
+
+		if( leftSideElement.isTokenWithDecoration ) {
+			leftSideAsString = delegates.getPremiseVariableForSource(getSourceOfPremiseVariableByName(leftSideElement.tokenWithDecoration.token.contentString));
+		}
+		else if( leftSideElement.isBrace ) {
+			leftSideAsString = nestedFnGetCodeOfCompoundCreationRecursivly(leftSideElement);
+		}
+		else {
+			throw new Exception("Internal Error");
+		}
+
+		if( rightSideElement.isTokenWithDecoration ) {
+			rightSideAsString = delegates.getPremiseVariableForSource(getSourceOfPremiseVariableByName(rightSideElement.tokenWithDecoration.token.contentString));
+		}
+		else if( leftSideElement.isBrace ) {
+			leftSideAsString = nestedFnGetCodeOfCompoundCreationRecursivly(rightSideElement);
+		}
+		else {
+			throw new Exception("Internal Error");
+		}
+
+		
 		// TODO< put the string into the templates >
 		return "genBinary(%s, %s, %s)".format(leftSideAsString, copulaAsString, rightSideAsString);
 	}
 
 	// returns the string for the codegen.
 	// The generated code builds an TemporaryUnifiedTerm with the structure in the target, the terms which apear in the premise get referenced by the coresponding variables.
-	string nestedFnGetStringOfCompundCreationRecursivly(Element element) {
+	nestedFnGetCodeOfCompoundCreationRecursivly = (Element element){
 		if( element.braceContent.length == 3 ) {
 			// TODO< check for ordinary binary compound >
 			return nestedFnGetStringOfBinaryCompoundCreationRecursivly(element.braceContent[0], element.braceContent[1], element.braceContent[2]);
@@ -1020,10 +1042,10 @@ string generateCodeForDeriver(CodegenDelegates delegates, CodegenStringTemplates
 		else {
 			throw new Exception("Nonbinary compounds are not implemented!");
 		}
-	}
+	};
 
 	string nestedFnGetStringOfTermForResult(RuleResultWithPostconditionAndTruth rule) {
-		string createdCompoundCode = nestedFnGetStringOfCompundCreationRecursivly(rule.resultTransformationElement);
+		string createdCompoundCode = nestedFnGetCodeOfCompoundCreationRecursivly(rule.resultTransformationElement);
 
 		// TODO< put the string into the templates >
 		return "genTerm(%s, %s)".format(createdCompoundCode, delegates.truthFunctionCode(rule.postcondition.truthfunction));
@@ -1031,7 +1053,7 @@ string generateCodeForDeriver(CodegenDelegates delegates, CodegenStringTemplates
 
 	foreach( iterationRuleResultWithPostconditionAndTruth; ruleDescriptor.ruleResultWithPostconditionAndTruth ) {
 		// TODO< put the string into the templates >
-		generated ~= "resultTerms ~= %s".format(nestedFnGetStringOfCompundCreationRecursivly(iterationRuleResultWithPostconditionAndTruth.resultTransformationElement)) ~ "\n";
+		generated ~= "resultTerms ~= %s".format(nestedFnGetCodeOfCompoundCreationRecursivly(iterationRuleResultWithPostconditionAndTruth.resultTransformationElement)) ~ "\n";
 	}
 	
 
