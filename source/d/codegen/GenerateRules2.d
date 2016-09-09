@@ -8,6 +8,10 @@ bool isOperation(const Token!EnumOperationType token, const EnumOperationType ch
 	return token.type == Token!EnumOperationType.EnumType.OPERATION && token.contentOperation == checkOperationType;
 }
 
+string getString(const Token!EnumOperationType token) {
+	return token.contentString;
+}
+
 import ArrayStack;
 
 enum EnumOperationType {
@@ -137,6 +141,10 @@ struct TokenWithDecoration {
 		return type == EnumType.DEPENDENTVAR;
 	}
 
+	final @property bool isVariable() {
+		return isIndependentVariable || isDependentVariable;
+	}
+
 
 	static TokenWithDecoration makeToken(Token!EnumOperationType token) {
 		TokenWithDecoration result;
@@ -201,16 +209,24 @@ class Element {
 	Element[] braceContent; // without accessor because im not sure if the array can be manipulated like an reference if we pass it outside
 	                        // TODO< investigate this >
 
+	final @property Element leftChild() {
+		assert(braceContent.length == 3);
+		return braceContent[0];
+	}
 
+	final @property Element rightChild() {
+		assert(braceContent.length == 3);
+		return braceContent[2];
+	}
 
 	final @property string leftIdentifier() {
-		assert(braceContent[0].tokenWithDecoration.token.type == Token!EnumOperationType.EnumType.IDENTIFIER);
-		return braceContent[0].tokenWithDecoration.token.contentString;
+		assert(leftChild.tokenWithDecoration.token.type == Token!EnumOperationType.EnumType.IDENTIFIER);
+		return leftChild.tokenWithDecoration.token.contentString;
 	}
 
 	final @property string rightIdentifier() {
-		assert(braceContent[2].tokenWithDecoration.token.type == Token!EnumOperationType.EnumType.IDENTIFIER);
-		return braceContent[2].tokenWithDecoration.token.contentString;
+		assert(rightChild.tokenWithDecoration.token.type == Token!EnumOperationType.EnumType.IDENTIFIER);
+		return rightChild.tokenWithDecoration.token.contentString;
 	}
 
 	final @property EnumOperationType operation() {
@@ -230,7 +246,7 @@ class Element {
 		import std.stdio;
 
 		if( isTokenWithDecoration ) {
-			writeln(spaceTimes(depth), "token");
+			writeln(spaceTimes(depth), "token ", tokenWithDecoration.token.getString);
 		}
 		else {
 			writeln(spaceTimes(depth), "brace");
@@ -392,7 +408,46 @@ class Parser : AbstractParser!EnumOperationType {
 
 
 struct FlagsOfCopula {
-	bool flagInheritanceToLeft, flagInheritanceToRight;
+	bool nal1or2; // --> <->
+	bool nal5; // ==> <=>
+
+	bool arrowLeft, arrowRight;
+
+	static FlagsOfCopula makeInheritance() {
+		FlagsOfCopula result;
+		with(result) {
+			nal1or2 = true;
+			arrowRight = true;
+		}
+		return result;
+	}
+
+	static FlagsOfCopula makeSimilarity() {
+		FlagsOfCopula result;
+		with(result) {
+			nal1or2 = true;
+			arrowLeft = arrowRight = true;
+		}
+		return result;
+	}
+
+	static FlagsOfCopula makeImplication() {
+		FlagsOfCopula result;
+		with(result) {
+			nal5 = true;
+			arrowRight = true;
+		}
+		return result;
+	}
+
+	static FlagsOfCopula makeEquivalence() {
+		FlagsOfCopula result;
+		with(result) {
+			nal5 = true;
+			arrowLeft = arrowRight = true;
+		}
+		return result;
+	}
 }
 
 struct Postcondition {
@@ -409,13 +464,15 @@ class RuleResultWithPostconditionAndTruth {
 	}
 }
 
+enum EnumSource {
+	ALEFT,
+	ARIGHT,
+	BLEFT,
+	BRIGHT,
+}
+
 struct RuleDescriptor {
-	enum EnumSource {
-		ALEFT,
-		ARIGHT,
-		BLEFT,
-		BRIGHT,
-	}
+	Element[2] premiseElements;
 
 	RuleResultWithPostconditionAndTruth[] ruleResultWithPostconditionAndTruth;
 
@@ -436,18 +493,18 @@ private RuleDescriptor translateParserRuleToRuleDescriptor(Parser.Rule parserRul
 	}
 
 	void innerFnFindCommonCompoundTerms() {
-		Tuple!(string, RuleDescriptor.EnumSource)[] leftMatching;
-		leftMatching ~= Tuple!(string, RuleDescriptor.EnumSource)(parserRule.elementsBeforeHalfH[0].leftIdentifier, RuleDescriptor.EnumSource.ALEFT);
-		leftMatching ~= Tuple!(string, RuleDescriptor.EnumSource)(parserRule.elementsBeforeHalfH[0].rightIdentifier, RuleDescriptor.EnumSource.ARIGHT);
+		Tuple!(string, EnumSource)[] leftMatching;
+		leftMatching ~= Tuple!(string, EnumSource)(parserRule.elementsBeforeHalfH[0].leftIdentifier, EnumSource.ALEFT);
+		leftMatching ~= Tuple!(string, EnumSource)(parserRule.elementsBeforeHalfH[0].rightIdentifier, EnumSource.ARIGHT);
 
-		Tuple!(string, RuleDescriptor.EnumSource)[] rightMatching;
-		rightMatching ~= Tuple!(string, RuleDescriptor.EnumSource)(parserRule.elementsBeforeHalfH[1].leftIdentifier, RuleDescriptor.EnumSource.BLEFT);
-		rightMatching ~= Tuple!(string, RuleDescriptor.EnumSource)(parserRule.elementsBeforeHalfH[1].rightIdentifier, RuleDescriptor.EnumSource.BRIGHT);
+		Tuple!(string, EnumSource)[] rightMatching;
+		rightMatching ~= Tuple!(string, EnumSource)(parserRule.elementsBeforeHalfH[1].leftIdentifier, EnumSource.BLEFT);
+		rightMatching ~= Tuple!(string, EnumSource)(parserRule.elementsBeforeHalfH[1].rightIdentifier, EnumSource.BRIGHT);
 
 		foreach( iterationLeftMatching; leftMatching ) {
 			foreach( iterationRightMatching; rightMatching ) {
 				if( iterationLeftMatching[0] == iterationRightMatching[0] ) {
-					resultRuleDescriptor.toMatchInputTerms ~= Tuple!(RuleDescriptor.EnumSource, RuleDescriptor.EnumSource)(iterationLeftMatching[1], iterationRightMatching[1]);				
+					resultRuleDescriptor.toMatchInputTerms ~= Tuple!(EnumSource, EnumSource)(iterationLeftMatching[1], iterationRightMatching[1]);				
 				}
 			}
 		}
@@ -462,7 +519,7 @@ private RuleDescriptor translateParserRuleToRuleDescriptor(Parser.Rule parserRul
 
 		static Postcondition innerFnConvertPostconditionToDescriptor(Element element) {
 			Postcondition resultPostcondition;
-			resultPostcondition.truthfunction = element.tokenWithDecoration.token.contentString;
+			resultPostcondition.truthfunction = element.braceContent[0].tokenWithDecoration.token.contentString;
 			return resultPostcondition;
 		}
 
@@ -478,8 +535,11 @@ private RuleDescriptor translateParserRuleToRuleDescriptor(Parser.Rule parserRul
 		resultRuleDescriptor.ruleResultWithPostconditionAndTruth ~= innerFnConvertElementsOfResultWithPostconditionAndTruthToDescriptor(parserRule.elementsAfterHalfH[0].braceContent[childElementIndex..childElementIndex+3]);
 	}
 
-	return resultRuleDescriptor;
 
+
+	resultRuleDescriptor.premiseElements = parserRule.elementsBeforeHalfH[0..2];
+
+	return resultRuleDescriptor;
 }
 
 /+ uncommented 08.09.2016 because it needs an overhaul to account for the new clojure like parsing
@@ -672,11 +732,6 @@ void main() {
 	{
 	lexer.setSource(
 	"""
-	 #R[(S --> M) (P --> M) |- (((P --> $X) ==> (S --> $X)) :post (:t/abduction)
-                                      ((S --> $X) ==> (P --> $X)) :post (:t/induction)
-                                      ((P --> $X) <=> (S --> $X)) :post (:t/comparison)
-                                      (&& (S --> #Y) (P --> #Y)) :post (:t/intersection))
-                                          :pre (:belief? (:!= S P))]
 	""");
 	}
 	//*/
@@ -702,7 +757,7 @@ lexer.setSource(
 	""");
 	//*/
 	
-	//* uncommented because its in a crappy format, still TODO
+	//*
 	lexer.setSource(
 	"""
 	 #R[(S --> M) (P --> M) |- (((P --> $X) ==> (S --> $X)) :post (:t/abduction)
@@ -735,6 +790,10 @@ lexer.setSource(
 	parser.rules[0].rootElement.debugIt(0);
 
 
+	RuleDescriptor ruleDescriptor = translateParserRuleToRuleDescriptor(parser.rules[0]);
+
+	writeln(generateDCodeForDeriver(ruleDescriptor));
+
 	//RuleDescriptor[] ruleDescriptors = translateParserRulesToRuleDescriptors(parser.rules);
 	//writeln(generateCodeCppForDeriver(ruleDescriptors));
 }
@@ -742,6 +801,245 @@ lexer.setSource(
 
 
 // generates the target code (currently C++) for the "deriver"(which currently just does some pretty basic things)
+
+class CodegenDelegates {
+	string function() signatureOpen;
+	string function() signatureClose;
+
+	string function(FlagsOfCopula flags) convertFlagsOfCopulaToFlags;
+	string function(EnumSource source) getPremiseVariableForSource;
+	string function(string truthfunction) truthFunctionCode; // gets the raw truthfunction key as in the clojure like DSL, has to return an Enum value in the target language
+}
+
+class CodegenStringTemplates {
+	string templateEntry, templateLeave;
+}
+
+string generateDCodeForDeriver(RuleDescriptor ruleDescriptor) {
+	static string signatureOpen() {
+		return "UnifiedTerm[] derive(ReasonerInstance reasonerInstance, UnifiedTermIndex[] leftPathTermIndices, UnifiedTermIndex[] rightPathTermIndices, float k) {";
+	}
+
+	static string signatureClose() {
+		return "}";
+	}
+
+	static string convertFlagsOfCopulaToFlags(FlagsOfCopula flags) {
+		string result;
+
+		assert(false, "TODO - we just need to build a FlagsOfCopula in the generating source");
+
+		/* 09.09.2016 - uncommented because code is outdated
+		if( flags.flagInheritanceToLeft ) {
+			result ~= "cast(TermFlagsType)TermFlagsType(EnumTermFlags.INHERITANCE_TOLEFT) |";
+		}
+		if( flags.flagInheritanceToRight ) {
+			result ~= "cast(TermFlagsType)TermFlagsType)(EnumTermFlags.INHERITANCE_TORIGHT) |";
+		}
+		*/
+
+		result = result[0..$-1];
+		return result;
+	}
+
+	static string getPremiseVariableForSource(EnumSource source) {
+		final switch(source) {
+			case EnumSource.ALEFT: return "premiseLeft.left";
+			case EnumSource.ARIGHT: return "premiseLeft.right";
+			case EnumSource.BLEFT: return "premiseRight.left";
+			case EnumSource.BRIGHT: return "premiseRight.right";
+		}
+	}
+
+	static string truthFunctionCode(string truthfunction) {
+		assert(false, "TODO");
+	}
+
+	CodegenDelegates delegates = new CodegenDelegates;
+	delegates.signatureOpen = &signatureOpen;
+	delegates.signatureClose = &signatureClose;
+	delegates.convertFlagsOfCopulaToFlags = &convertFlagsOfCopulaToFlags;
+	delegates.getPremiseVariableForSource = &getPremiseVariableForSource;
+	delegates.truthFunctionCode = &truthFunctionCode;
+
+
+	CodegenStringTemplates stringTemplates = new CodegenStringTemplates;
+	stringTemplates.templateEntry = """
+			TemporaryUnifiedTerm[] resultTerms;
+
+			UnifiedTermIndex premiseLeftIndex = leftPathTermIndices[$]; // AUTOGEN< need it to check for the flags of the left concept >
+			UnifiedTerm premiseLeft = reasonerInstance.accessTermByIndex(premiseLeftIndex);
+
+			UnifiedTermIndex premiseRightIndex = rightPathTermIndices[$]; // AUTOGEN< need it to check for the flags of the right concept >
+			UnifiedTerm premiseRight = reasonerInstance.accessTermByIndex(premiseRightIndex);
+
+			alias typeof(previousLeft.termFlags) TermFlagsType;
+	""";
+
+	stringTemplates.templateLeave = """return resultTerms;""";
+
+	return generateCodeForDeriver(delegates, stringTemplates, ruleDescriptor);
+}
+
+
+bool isBinaryCopula(EnumOperationType operationType) {
+	/* nonfinal */ switch(operationType) with (EnumOperationType) {
+		case SIMILARITY: // <->
+		case INHERITANCE: // -->
+		case IMPLCIATION: // ==>
+		case EQUIVALENCE: // <=>
+		return true;
+		default:
+		return false;
+	}
+}
+
+alias Element Compound;
+
+bool isCopula(Compound compound) {
+	if( compound.tokenWithDecoration.isVariable ) {
+		return false;
+	}
+
+	Token!EnumOperationType token = compound.tokenWithDecoration.token;
+
+	if( token.type != Token!EnumOperationType.EnumType.OPERATION ) {
+		return false;
+	}
+
+	return token.contentOperation.isBinaryCopula;
+}
+
+// helper to decide if a Element is a binary compound
+bool isBinaryCompound(Compound compound) {
+	return compound.braceContent.length == 3 && compound.braceContent[2].isCopula;
+}
+
+import std.format : format;
+
+string generateCodeForDeriver(CodegenDelegates delegates, CodegenStringTemplates stringTemplates, RuleDescriptor ruleDescriptor) {
+	string generated;
+
+	generated ~= delegates.signatureOpen() ~ "\n";
+	generated ~= stringTemplates.templateEntry;
+
+	static FlagsOfCopula convertCopulaElementToFlagsOfCopula(Element copulaElement) {
+		assert(copulaElement.isCopula);
+		
+		Token!EnumOperationType token = copulaElement.tokenWithDecoration.token;
+		/* nonfinal */ switch(token.contentOperation) with (EnumOperationType) {
+			case SIMILARITY: return FlagsOfCopula.makeSimilarity();
+			case INHERITANCE: return FlagsOfCopula.makeInheritance();
+			case IMPLCIATION: return FlagsOfCopula.makeImplication();
+			case EQUIVALENCE: return FlagsOfCopula.makeEquivalence();
+			default: throw new Exception("Internal error"); // or not implemented
+		}
+	}
+
+	EnumSource getSourceOfPremiseVariableByName(string premiseVariableName) {
+		bool doesPremiseVariableApearInLeafElementRecursivly(Element element) {
+			return element.tokenWithDecoration.token.contentString == premiseVariableName;
+		}
+
+		bool doesPremiseVariableApearInCompoundRecursivly(Compound compound) {
+			if( compound.isBrace ) {
+				assert(compound.isBinaryCompound); // just binary compounds are for now implemented
+
+				return doesPremiseVariableApearInCompoundRecursivly(compound.leftChild) || doesPremiseVariableApearInCompoundRecursivly(compound.rightChild);
+			}
+			else if( compound.isTokenWithDecoration ) {
+				return doesPremiseVariableApearInLeafElementRecursivly(compound);
+			}
+			else {
+				throw new Exception("Internal error"); // may be because its not implemented
+			}
+		}
+
+		// an enum to inform getSourceOfPremiseVariableByNameForCompound() about on which side it "looks"
+		enum EnumPremiseSide {
+			LEFT,
+			RIGHT,
+		}
+
+		EnumSource getSourceOfPremiseVariableByNameForCompound(Compound compound, EnumPremiseSide premiseSide) {
+			assert(doesPremiseVariableApearInCompoundRecursivly(compound));
+
+			assert(compound.isBinaryCompound); // just binary compounds are for now implemented
+
+			assert(!compound.leftChild.tokenWithDecoration.isVariable);
+			assert(!compound.rightChild.tokenWithDecoration.isVariable);
+
+			if( compound.leftChild.tokenWithDecoration.token.contentString == premiseVariableName ) {
+				final switch(premiseSide) with(EnumPremiseSide) {
+					case LEFT: return EnumSource.ALEFT;
+					case RIGHT: return EnumSource.ARIGHT;
+				}
+			}
+			else if( compound.rightChild.tokenWithDecoration.token.contentString == premiseVariableName ) {
+				final switch(premiseSide) with(EnumPremiseSide) {
+					case LEFT: return EnumSource.BLEFT;
+					case RIGHT: return EnumSource.BRIGHT;
+				}
+			}
+			else {
+				throw new Exception("Internal error, premiseVariable wasn't found, but its guranteed to be found, should never happen!");
+			}
+		}
+
+		if( doesPremiseVariableApearInCompoundRecursivly(ruleDescriptor.premiseElements[0]) ) {
+			return getSourceOfPremiseVariableByNameForCompound(ruleDescriptor.premiseElements[0], EnumPremiseSide.LEFT);
+		}
+		else if( doesPremiseVariableApearInCompoundRecursivly(ruleDescriptor.premiseElements[1]) ) {
+			return getSourceOfPremiseVariableByNameForCompound(ruleDescriptor.premiseElements[1], EnumPremiseSide.RIGHT);
+		}
+		else {
+			throw new Exception("premiseVariableName wasn't found in left or right premisses!");
+		}
+	}
+
+	string nestedFnGetStringOfBinaryCompoundCreationRecursivly(Element leftSideElement, Element copulaElement, Element rightSideElement) {
+		string copulaAsString = delegates.convertFlagsOfCopulaToFlags(convertCopulaElementToFlagsOfCopula(copulaElement));
+
+		assert(false, "TODO TODO TODO");
+		// TODO TODO TODO TODO< check if it are compounds and recursivly call nestedFnGetStringOfCompundCreationRecursivly if its the case
+		// else we check if it is an premise variable, if it is the case we generate the code for accessing it >
+		string leftSideAsString = delegates.getPremiseVariableForSource(getSourceOfPremiseVariableByName(leftSideElement.tokenWithDecoration.token.contentString));
+		string rightSideAsString = delegates.getPremiseVariableForSource(getSourceOfPremiseVariableByName(rightSideElement.tokenWithDecoration.token.contentString));
+
+		// TODO< put the string into the templates >
+		return "genBinary(%s, %s, %s)".format(leftSideAsString, copulaAsString, rightSideAsString);
+	}
+
+	// returns the string for the codegen.
+	// The generated code builds an TemporaryUnifiedTerm with the structure in the target, the terms which apear in the premise get referenced by the coresponding variables.
+	string nestedFnGetStringOfCompundCreationRecursivly(Element element) {
+		if( element.braceContent.length == 3 ) {
+			// TODO< check for ordinary binary compound >
+			return nestedFnGetStringOfBinaryCompoundCreationRecursivly(element.braceContent[0], element.braceContent[1], element.braceContent[2]);
+		}
+		else {
+			throw new Exception("Nonbinary compounds are not implemented!");
+		}
+	}
+
+	string nestedFnGetStringOfTermForResult(RuleResultWithPostconditionAndTruth rule) {
+		string createdCompoundCode = nestedFnGetStringOfCompundCreationRecursivly(rule.resultTransformationElement);
+
+		// TODO< put the string into the templates >
+		return "genTerm(%s, %s)".format(createdCompoundCode, delegates.truthFunctionCode(rule.postcondition.truthfunction));
+	}
+
+	foreach( iterationRuleResultWithPostconditionAndTruth; ruleDescriptor.ruleResultWithPostconditionAndTruth ) {
+		// TODO< put the string into the templates >
+		generated ~= "resultTerms ~= %s".format(nestedFnGetStringOfCompundCreationRecursivly(iterationRuleResultWithPostconditionAndTruth.resultTransformationElement)) ~ "\n";
+	}
+	
+
+	generated ~= stringTemplates.templateLeave;
+	generated ~= delegates.signatureClose() ~ "\n";
+
+	return generated;
+}
 
 /+ uncommented 09.09.2016 because overhaul and a language independent interface(now for D) is needed
 string generateCodeCppForDeriver(RuleDescriptor[] ruleDescriptors) {
@@ -812,8 +1110,6 @@ string generateCodeCppForDeriver(RuleDescriptor[] ruleDescriptors) {
 
 				UnifiedTerm resultTerm = Ruletable::ruletableGeneralizedBinary(previousLeft, previousRight, k, rule);
 				resultTerms.push_back(resultTerm);
-
-				// AUTOGEN TODO< PATRICK ASK < do we need to append the stuff before the tree  > >
 		""";
 
 
