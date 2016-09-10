@@ -477,8 +477,27 @@ enum EnumSource {
 	BRIGHT,
 }
 
+// walks the paths of the childrens and returns this element
+Element walk(Element entry, size_t[] childrenIndices) {
+	if( childrenIndices.length == 0 ) {
+		return entry;
+	}
+	else {
+		return walk(entry.braceContent[childrenIndices[0]], childrenIndices[1..$]);
+	}
+}
+
 struct RuleDescriptor {
 	Element[2] premiseElements;
+
+	final @property Element leftPremiseElement() {
+		return premiseElements[0];
+	}
+
+	final @property Element rightPremiseElement() {
+		return premiseElements[1];
+	}
+
 
 	RuleResultWithPostconditionAndTruth[] ruleResultWithPostconditionAndTruth;
 
@@ -551,28 +570,7 @@ private RuleDescriptor translateParserRuleToRuleDescriptor(Parser.Rule parserRul
 /+ uncommented 08.09.2016 because it needs an overhaul to account for the new clojure like parsing
 
 private RuleDescriptor[] translateParserRulesToRuleDescriptors(Parser.Rule[] parserRules) {
-	string getTruthFunction(Parser.DictionaryElement dictionaryElement) {
-		foreach( iterationContent; dictionaryElement.content ) {
-			if( !iterationContent.convertsTo!string() ) {
-				continue;
-			}
-
-			string iterationKey = iterationContent.get!string();
-
-
-			writeln(iterationKey[0..3]);
-			if( iterationKey[0..3] == ":t/" ) {
-				return iterationKey;
-			}
-		}
-
-		// TODO< throw something >
-		return "";
-	}
-
-
-
-
+	
 	RuleDescriptor[] translatedRules;
 
 	foreach( iterationParserRule; parserRules ) {
@@ -619,24 +617,6 @@ private RuleDescriptor[] translateParserRulesToRuleDescriptors(Parser.Rule[] par
 
 						break;
 					}
-				}
-			}
-		}
-
-		// find common left side term thingies
-
-		Tuple!(string, EnumSource)[] leftMatching;
-		leftMatching ~= Tuple!(string, EnumSource)(iterationParserRule.elementsBefore[0].leftIdentifier, EnumSource.ALEFT);
-		leftMatching ~= Tuple!(string, EnumSource)(iterationParserRule.elementsBefore[0].rightIdentifier, EnumSource.ARIGHT);
-
-		Tuple!(string, EnumSource)[] rightMatching;
-		rightMatching ~= Tuple!(string, EnumSource)(iterationParserRule.elementsBefore[1].leftIdentifier, EnumSource.BLEFT);
-		rightMatching ~= Tuple!(string, EnumSource)(iterationParserRule.elementsBefore[1].rightIdentifier, EnumSource.BRIGHT);
-
-		foreach( iterationLeftMatching; leftMatching ) {
-			foreach( iterationRightMatching; rightMatching ) {
-				if( iterationLeftMatching[0] == iterationRightMatching[0] ) {
-					ruleDescriptorToAdd.toMatchPremiseTerms ~= Tuple!(EnumSource, EnumSource)(iterationLeftMatching[1], iterationRightMatching[1]);				
 				}
 			}
 		}
@@ -847,7 +827,7 @@ string generateDCodeForDeriver(RuleDescriptor ruleDescriptor) {
 	}
 
 	static string truthFunctionCode(string truthFunction) {
-		static string translateTruthFunctionToCppEnum(string truthFunction) {
+		static string translateTruthFunctionToEnum(string truthFunction) {
 			assert(truthFunction[0..3] == ":t/");
 			string untranslated = truthFunction[3..$];
 
@@ -856,7 +836,7 @@ string generateDCodeForDeriver(RuleDescriptor ruleDescriptor) {
 			return untranslated.replace("-", "").toUpper;
 		}
 
-		return translateTruthFunctionToCppEnum(truthFunction);
+		return translateTruthFunctionToEnum(truthFunction);
 	}
 
 	static string independentVariableCreation(string variableName) {
@@ -920,12 +900,12 @@ string generateDCodeForDeriver(RuleDescriptor ruleDescriptor) {
 	stringTemplates.templateCheckEntry = """
 		if( 
 			// AUTOGEN< check flags for match >
-			(previousLeft.termFlags == (static_cast<decltype(previousLeft.termFlags)>(%s)) && previousRight.termFlags == (static_cast<decltype(previousLeft.termFlags)>(%s)))
+			(previousLeft.termFlags == (cast(typeof(previousLeft.termFlags))(%s)) && previousRight.termFlags == (cast(typeof(previousLeft.termFlags))(%s)))
 
 			// AUTOGEN< check for source pattern >
 			&& (%s)
 
-			// AUTOGEN check eventually for the unequal precondition
+			// AUTOGEN< check eventually for the preconditions >
 			%s
 		) {
 	""";
@@ -983,6 +963,19 @@ bool isCopula(Compound compound) {
 bool isBinaryCompound(Compound compound) {
 	return compound.braceContent.length == 3 && compound.braceContent[1].isCopula;
 }
+
+Element getNonprefixCopulaElement(Compound compound) {
+	Element result = compound.braceContent[1];
+	assert(result.isCopula);
+	return result;
+}
+
+Element getPrefixCopulaElement(Compound compound) {
+	Element result = compound.braceContent[0];
+	assert(result.isCopula);
+	return result;
+}
+
 
 import std.format : format;
 
@@ -1068,7 +1061,7 @@ string generateCodeForDeriver(CodegenDelegates delegates, CodegenStringTemplates
 	}
 
 	// returns the to generated code for the token
-	// used in the recursive codgen code for the creation of the temporary objects describing the creation of the comounds/terms
+	// used in the recursive codgen code for the creation of the temporary objects describing the creation of the compounds/terms
 	string nestedFnGetCodeOfToken(TokenWithDecoration tokenWithDecoration) {
 		Token!EnumOperationType token = tokenWithDecoration.token;
 
@@ -1151,15 +1144,21 @@ string generateCodeForDeriver(CodegenDelegates delegates, CodegenStringTemplates
 		return "genTerm(%s, %s)".format(createdCompoundCode, delegates.truthFunctionCode(rule.postcondition.truthfunction));
 	}
 
+	// generate code for the check of the premises
+	{
+		string nestedCodeForUnequalCheck = "TODO";
 
-	string nestedCodeForUnequalCheck = "TODO";
-
-	generated ~= stringTemplates.templateCheckEntry.format( 
-		"TODO", //convertFlagsOfCopulaToFlags(ruleDescriptor.flagsOfSourceCopula[0]),
-		"TODO", //convertFlagsOfCopulaToFlags(ruleDescriptor.flagsOfSourceCopula[1]),
-		delegates.codeForPremisePatternMatching(ruleDescriptor.toMatchPremiseTerms),
-		nestedCodeForUnequalCheck
-	);
+		// we do walk because later on we have to match deeper terms
+		Element leftPremiseCompoundCopulaElement = ruleDescriptor.leftPremiseElement.walk([]).getNonprefixCopulaElement;
+		Element rightPremiseCompoundCopulaElement = ruleDescriptor.rightPremiseElement.walk([]).getNonprefixCopulaElement;
+		
+		generated ~= stringTemplates.templateCheckEntry.format( 
+			delegates.convertFlagsOfCopulaToFlags(convertCopulaElementToFlagsOfCopula(leftPremiseCompoundCopulaElement)), //convertFlagsOfCopulaToFlags(ruleDescriptor.flagsOfSourceCopula[0]),
+			delegates.convertFlagsOfCopulaToFlags(convertCopulaElementToFlagsOfCopula(rightPremiseCompoundCopulaElement)), //convertFlagsOfCopulaToFlags(ruleDescriptor.flagsOfSourceCopula[1]),
+			delegates.codeForPremisePatternMatching(ruleDescriptor.toMatchPremiseTerms),
+			nestedCodeForUnequalCheck
+		);
+	}
 
 
 	foreach( iterationRuleResultWithPostconditionAndTruth; ruleDescriptor.ruleResultWithPostconditionAndTruth ) {
@@ -1169,6 +1168,10 @@ string generateCodeForDeriver(CodegenDelegates delegates, CodegenStringTemplates
 
 	generated ~= stringTemplates.templateCheckLeave;
 	
+
+	// TODO< rewrite as string templates >
+	generated ~= ";\n"; // finish the else from the last templateCheckLeave
+
 
 	generated ~= stringTemplates.templateLeave;
 	generated ~= delegates.signatureClose() ~ "\n";
@@ -1186,21 +1189,6 @@ string generateCodeCppForDeriver(RuleDescriptor[] ruleDescriptors) {
 
 		
 
-		string templateCheckEntry = """
-			if( 
-				// AUTOGEN< check flags for match >
-				(previousLeft.termFlags == (static_cast<decltype(previousLeft.termFlags)>(%s)) && previousRight.termFlags == (static_cast<decltype(previousLeft.termFlags)>(%s)))
-
-				// AUTOGEN< check for source pattern >
-				&& (%s)
-
-				// AUTOGEN check eventually for the unequal precondition
-				%s
-			) {
-		""";
-		
-
-		string templateCheckLeave = "}\n else \n";
 
 		string templateRuletableGeneralizedBinary = """
 				Ruletable::GeneralizedBinaryRule rule;
