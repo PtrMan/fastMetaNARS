@@ -1050,7 +1050,8 @@ string generateCodeForDeriver(CodegenDelegates delegates, CodegenStringTemplates
 			return delegates.dependentVariableCreation(token.contentString);
 		}
 		else {
-			return delegates.getPremiseVariableForSource(getSourceOfPremiseVariableByName(token.contentString));
+			EnumSource sourceOfPremiseVariable = getSourceOfPremiseVariableByName(token.contentString);
+			return delegates.getPremiseVariableForSource(sourceOfPremiseVariable);
 		}
 	}
 
@@ -1078,14 +1079,17 @@ string generateCodeForDeriver(CodegenDelegates delegates, CodegenStringTemplates
 		if( rightSideElement.isTokenWithDecoration ) {
 			rightSideAsString = nestedFnGetCodeOfToken(rightSideElement.tokenWithDecoration);
 		}
-		else if( leftSideElement.isBrace ) {
-			leftSideAsString = nestedFnGetCodeOfCompoundCreationRecursivly(rightSideElement);
+		else if( rightSideElement.isBrace ) {
+			rightSideAsString = nestedFnGetCodeOfCompoundCreationRecursivly(rightSideElement);
 		}
 		else {
 			throw new Exception("Internal Error");
 		}
 
 		
+		import std.stdio;
+		
+
 		return delegates.temporaryCompoundCreation(copulaForm, copulaAsString, [leftSideAsString, rightSideAsString]);
 	}
 
