@@ -413,6 +413,8 @@ struct FlagsOfCopula {
 
 	bool arrowLeft, arrowRight;
 
+	bool isConjection;
+
 	static FlagsOfCopula makeInheritance() {
 		FlagsOfCopula result;
 		with(result) {
@@ -446,6 +448,12 @@ struct FlagsOfCopula {
 			nal5 = true;
 			arrowLeft = arrowRight = true;
 		}
+		return result;
+	}
+
+	static FlagsOfCopula makeConjuction() {
+		FlagsOfCopula result;
+		result.isConjection = true;
 		return result;
 	}
 }
@@ -800,19 +808,35 @@ lexer.setSource(
 
 
 
+enum EnumCopulaForm {
+	PREFIX, // example : (&& A B)
+	NONPRFIX, // example : (A --> B)
+}
+
 // generates the target code (currently C++) for the "deriver"(which currently just does some pretty basic things)
 
 class CodegenDelegates {
+	
+
 	string function() signatureOpen;
 	string function() signatureClose;
 
 	string function(FlagsOfCopula flags) convertFlagsOfCopulaToFlags;
 	string function(EnumSource source) getPremiseVariableForSource;
 	string function(string truthfunction) truthFunctionCode; // gets the raw truthfunction key as in the clojure like DSL, has to return an Enum value in the target language
+
+	string function(string variableName) independentVariableCreation; // has to generate the code for the generation of the variable with the specific name
+	string function(string variableName) dependentVariableCreation;
+
+	// generates code for the creation of a temporary compound which is returned from the deriver
+	// the arguments are already generated code
+	// copulaCode is generated code, too
+	string function(EnumCopulaForm copulaForm, string copulaCode, string[] arguments) temporaryCompoundCreation;
 }
 
 class CodegenStringTemplates {
 	string templateEntry, templateLeave;
+
 }
 
 string generateDCodeForDeriver(RuleDescriptor ruleDescriptor) {
@@ -827,16 +851,21 @@ string generateDCodeForDeriver(RuleDescriptor ruleDescriptor) {
 	static string convertFlagsOfCopulaToFlags(FlagsOfCopula flags) {
 		string result;
 
-		assert(false, "TODO - we just need to build a FlagsOfCopula in the generating source");
-
-		/* 09.09.2016 - uncommented because code is outdated
-		if( flags.flagInheritanceToLeft ) {
-			result ~= "cast(TermFlagsType)TermFlagsType(EnumTermFlags.INHERITANCE_TOLEFT) |";
+		if( flags.nal1or2 ) {
+			result ~= "cast(TermFlagsType)EnumTermFlags.NAL1OR2 |";
 		}
-		if( flags.flagInheritanceToRight ) {
-			result ~= "cast(TermFlagsType)TermFlagsType)(EnumTermFlags.INHERITANCE_TORIGHT) |";
+		else if( flags.nal5 ) {
+			result ~= "cast(TermFlagsType)EnumTermFlags.NAL5 |";
 		}
-		*/
+		else if( flags.arrowLeft ) {
+			result ~= "cast(TermFlagsType)EnumTermFlags.ARROWLEFT |";
+		}
+		else if( flags.arrowRight ) {
+			result ~= "cast(TermFlagsType)EnumTermFlags.ARROWRIGHT |";
+		}
+		else if( flags.isConjection ) {
+			result ~= "cast(TermFlagsType)EnumTermFlags.CONJUNCTION |";
+		}
 
 		result = result[0..$-1];
 		return result;
@@ -852,8 +881,35 @@ string generateDCodeForDeriver(RuleDescriptor ruleDescriptor) {
 	}
 
 	static string truthFunctionCode(string truthfunction) {
+		import std.stdio;
+		writeln(truthfunction);
+
+
 		assert(false, "TODO");
 	}
+
+	static string independentVariableCreation(string variableName) {
+		// TODO< map somehow the variables to integers and create temporary objects which describe them >
+		return "TODO";
+	}
+
+	static string dependentVariableCreation(string variableName) {
+		// TODO< map somehow the variables to integers and create temporary objects which describe them >
+		return "TODO";
+	}
+
+	static string temporaryCompoundCreation(EnumCopulaForm copulaForm, string copulaCode, string[] arguments) {
+		assert(arguments.length == 2, "just implemented for binary compounds!");
+
+		// NOTE< we ignore prefix and postfix form for now for the generated code >
+		const string
+			leftSideAsString = arguments[0],
+			rightSideAsString = arguments[1];
+		return "genBinary(%s, %s, %s)".format(copulaCode, leftSideAsString, rightSideAsString);
+	}
+
+
+	
 
 	CodegenDelegates delegates = new CodegenDelegates;
 	delegates.signatureOpen = &signatureOpen;
@@ -861,7 +917,9 @@ string generateDCodeForDeriver(RuleDescriptor ruleDescriptor) {
 	delegates.convertFlagsOfCopulaToFlags = &convertFlagsOfCopulaToFlags;
 	delegates.getPremiseVariableForSource = &getPremiseVariableForSource;
 	delegates.truthFunctionCode = &truthFunctionCode;
-
+	delegates.independentVariableCreation = &independentVariableCreation;
+	delegates.dependentVariableCreation = &dependentVariableCreation;
+	delegates.temporaryCompoundCreation = &temporaryCompoundCreation;
 
 	CodegenStringTemplates stringTemplates = new CodegenStringTemplates;
 	stringTemplates.templateEntry = """
@@ -882,7 +940,7 @@ string generateDCodeForDeriver(RuleDescriptor ruleDescriptor) {
 }
 
 
-bool isBinaryCopula(EnumOperationType operationType) {
+bool isBinaryNonprefixCopula(EnumOperationType operationType) {
 	/* nonfinal */ switch(operationType) with (EnumOperationType) {
 		case SIMILARITY: // <->
 		case INHERITANCE: // -->
@@ -894,9 +952,22 @@ bool isBinaryCopula(EnumOperationType operationType) {
 	}
 }
 
+bool isBinaryPrefixCopula(EnumOperationType operationType) {
+	/* nonfinal */ switch(operationType) with (EnumOperationType) {
+		case CONJUNCTION:
+		return true;
+		default:
+		return false;
+	}
+}
+
 alias Element Compound;
 
 bool isCopula(Compound compound) {
+	if( compound.isBrace ) {
+		return false;
+	}
+
 	if( compound.tokenWithDecoration.isVariable ) {
 		return false;
 	}
@@ -907,12 +978,12 @@ bool isCopula(Compound compound) {
 		return false;
 	}
 
-	return token.contentOperation.isBinaryCopula;
+	return token.contentOperation.isBinaryNonprefixCopula || token.contentOperation.isBinaryPrefixCopula;
 }
 
 // helper to decide if a Element is a binary compound
 bool isBinaryCompound(Compound compound) {
-	return compound.braceContent.length == 3 && compound.braceContent[2].isCopula;
+	return compound.braceContent.length == 3 && compound.braceContent[1].isCopula;
 }
 
 import std.format : format;
@@ -932,6 +1003,7 @@ string generateCodeForDeriver(CodegenDelegates delegates, CodegenStringTemplates
 			case INHERITANCE: return FlagsOfCopula.makeInheritance();
 			case IMPLCIATION: return FlagsOfCopula.makeImplication();
 			case EQUIVALENCE: return FlagsOfCopula.makeEquivalence();
+			case CONJUNCTION: return FlagsOfCopula.makeConjuction();
 			default: throw new Exception("Internal error"); // or not implemented
 		}
 	}
@@ -993,13 +1065,30 @@ string generateCodeForDeriver(CodegenDelegates delegates, CodegenStringTemplates
 			return getSourceOfPremiseVariableByNameForCompound(ruleDescriptor.premiseElements[1], EnumPremiseSide.RIGHT);
 		}
 		else {
-			throw new Exception("premiseVariableName wasn't found in left or right premisses!");
+			throw new Exception("premiseVariableName \"" ~ premiseVariableName ~ "\" wasn't found in left or right premisses!");
 		}
 	}
 
+	// returns the to generated code for the token
+	// used in the recursive codgen code for the creation of the temporary objects describing the creation of the comounds/terms
+	string nestedFnGetCodeOfToken(TokenWithDecoration tokenWithDecoration) {
+		Token!EnumOperationType token = tokenWithDecoration.token;
+
+		if( tokenWithDecoration.isIndependentVariable ) {
+			return delegates.independentVariableCreation(token.contentString);
+		}
+		else if( tokenWithDecoration.isDependentVariable ) {
+			return delegates.dependentVariableCreation(token.contentString);
+		}
+		else {
+			return delegates.getPremiseVariableForSource(getSourceOfPremiseVariableByName(token.contentString));
+		}
+	}
+
+
 	string delegate(Element element) nestedFnGetCodeOfCompoundCreationRecursivly;
 
-	string nestedFnGetStringOfBinaryCompoundCreationRecursivly(Element leftSideElement, Element copulaElement, Element rightSideElement) {
+	string nestedFnGetCodeOfBinaryCompoundCreationRecursivly(EnumCopulaForm copulaForm, Element copulaElement, Element leftSideElement, Element rightSideElement) {
 		string copulaAsString = delegates.convertFlagsOfCopulaToFlags(convertCopulaElementToFlagsOfCopula(copulaElement));
 
 		string leftSideAsString, rightSideAsString;
@@ -1008,7 +1097,7 @@ string generateCodeForDeriver(CodegenDelegates delegates, CodegenStringTemplates
 		// else we check if it is an premise variable, if it is the case we generate the code for accessing it
 
 		if( leftSideElement.isTokenWithDecoration ) {
-			leftSideAsString = delegates.getPremiseVariableForSource(getSourceOfPremiseVariableByName(leftSideElement.tokenWithDecoration.token.contentString));
+			leftSideAsString = nestedFnGetCodeOfToken(leftSideElement.tokenWithDecoration);
 		}
 		else if( leftSideElement.isBrace ) {
 			leftSideAsString = nestedFnGetCodeOfCompoundCreationRecursivly(leftSideElement);
@@ -1018,7 +1107,7 @@ string generateCodeForDeriver(CodegenDelegates delegates, CodegenStringTemplates
 		}
 
 		if( rightSideElement.isTokenWithDecoration ) {
-			rightSideAsString = delegates.getPremiseVariableForSource(getSourceOfPremiseVariableByName(rightSideElement.tokenWithDecoration.token.contentString));
+			rightSideAsString = nestedFnGetCodeOfToken(rightSideElement.tokenWithDecoration);
 		}
 		else if( leftSideElement.isBrace ) {
 			leftSideAsString = nestedFnGetCodeOfCompoundCreationRecursivly(rightSideElement);
@@ -1028,16 +1117,34 @@ string generateCodeForDeriver(CodegenDelegates delegates, CodegenStringTemplates
 		}
 
 		
-		// TODO< put the string into the templates >
-		return "genBinary(%s, %s, %s)".format(leftSideAsString, copulaAsString, rightSideAsString);
+		return delegates.temporaryCompoundCreation(copulaForm, copulaAsString, [leftSideAsString, rightSideAsString]);
 	}
 
 	// returns the string for the codegen.
 	// The generated code builds an TemporaryUnifiedTerm with the structure in the target, the terms which apear in the premise get referenced by the coresponding variables.
 	nestedFnGetCodeOfCompoundCreationRecursivly = (Element element){
+		EnumCopulaForm nestedFnGetCopulaForm() {
+			if( element.braceContent[0].isCopula ) {
+				return EnumCopulaForm.PREFIX;
+			}
+			else if( element.braceContent[1].isCopula ) {
+				return EnumCopulaForm.NONPRFIX;
+			}
+			else {
+				throw new Exception("Internal Error - unknown compound form");
+			}
+		}
+
+		import std.stdio; // DEBUGING
+		writeln("nestedFnGetCodeOfCompoundCreationRecursivly():");
+		element.debugIt(0);
+
+
 		if( element.braceContent.length == 3 ) {
-			// TODO< check for ordinary binary compound >
-			return nestedFnGetStringOfBinaryCompoundCreationRecursivly(element.braceContent[0], element.braceContent[1], element.braceContent[2]);
+			final switch(nestedFnGetCopulaForm()) with(EnumCopulaForm) {
+				case NONPRFIX: return nestedFnGetCodeOfBinaryCompoundCreationRecursivly(nestedFnGetCopulaForm(), element.braceContent[1], element.braceContent[0], element.braceContent[2]);
+				case PREFIX: return nestedFnGetCodeOfBinaryCompoundCreationRecursivly(nestedFnGetCopulaForm(), element.braceContent[0], element.braceContent[1], element.braceContent[2]);
+			}
 		}
 		else {
 			throw new Exception("Nonbinary compounds are not implemented!");
