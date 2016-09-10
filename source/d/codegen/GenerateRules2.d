@@ -581,34 +581,6 @@ private RuleDescriptor[] translateParserRulesToRuleDescriptors(Parser.Rule[] par
 		return untranslated.replace("-", "").toUpper;
 	}
 
-	// tries to find the variablenname on the left side of half-h
-	EnumSource findSource(Parser.Rule rule, string variablenname) {
-		if( rule.elementsBefore[0].leftIdentifier == variablenname ) {
-			return EnumSource.ALEFT;
-		}
-		else if( rule.elementsBefore[0].rightIdentifier == variablenname ) {
-			return EnumSource.ARIGHT;
-		}
-		else if( rule.elementsBefore[1].leftIdentifier == variablenname ) {
-			return EnumSource.BLEFT;
-		}
-		else if( rule.elementsBefore[1].rightIdentifier == variablenname ) {
-			return EnumSource.BRIGHT;
-		}
-		else {
-			return EnumSource.BLEFT;
-			// TODO< throw something "Couldn't find source" >
-		}
-
-	}
-
-	FlagsOfCopula translateOperationToCopola(EnumOperationType operation) {
-		FlagsOfCopula result;
-		result.flagInheritanceToLeft = (operation == EnumOperationType.SIMILARITY);
-		result.flagInheritanceToRight = (operation == EnumOperationType.INHERITANCE || operation == EnumOperationType.SIMILARITY);
-		return result;
-	}
-
 
 
 	RuleDescriptor[] translatedRules;
@@ -1177,40 +1149,6 @@ string generateCodeCppForDeriver(RuleDescriptor[] ruleDescriptors) {
 
 
 	string generateCodeForRuleDescriptor(RuleDescriptor ruleDescriptor) {
-		string getVariableForSource(EnumSource source) {
-			final switch(source) {
-				case EnumSource.ALEFT: return "previousLeft.left";
-				case EnumSource.ARIGHT: return "previousLeft.right";
-				case EnumSource.BLEFT: return "previousRight.left";
-				case EnumSource.BRIGHT: return "previousRight.right";
-			}
-		}
-
-
-		string convertFlagsOfCopulaToFlags(FlagsOfCopula flags) {
-			string result;
-
-			if( flags.flagInheritanceToLeft ) {
-				result ~= "static_cast<TermFlagsType>(EnumTermFlags::INHERITANCE_TOLEFT) |";
-			}
-			if( flags.flagInheritanceToRight ) {
-				result ~= "static_cast<TermFlagsType>(EnumTermFlags::INHERITANCE_TORIGHT) |";
-			}
-
-			result = result[0..$-1];
-			return result;
-		}
-
-		// helper
-		string convertSourceToCpp(EnumSource source) {
-			final switch(source) {
-				case EnumSource.ALEFT : return "EnumDerivationSource::ALEFT";
-				case EnumSource.ARIGHT : return "EnumDerivationSource::ARIGHT";
-				case EnumSource.BLEFT : return "EnumDerivationSource::BLEFT";
-				case EnumSource.BRIGHT : return "EnumDerivationSource::BRIGHT";
-			}
-		}
-
 
 		
 
@@ -1292,19 +1230,6 @@ string generateCodeCppForDeriver(RuleDescriptor[] ruleDescriptors) {
 		return emittedCode;
 	}
 
-	string templateEntry = """
-			vector<UnifiedTerm> resultTerms;
-
-			UnifiedTermIndex previousLeftIndex = leftPathTermIndices[leftPathTermIndices.size()-1]; // AUTOGEN< need it to check for the flags of the left concept >
-			UnifiedTerm previousLeft = reasonerInstance.accessTermByIndex(previousLeftIndex);
-
-			UnifiedTermIndex previousRightIndex = rightPathTermIndices[leftPathTermIndices.size()-1]; // AUTOGEN< need it to check for the flags of the right concept >
-			UnifiedTerm previousRight = reasonerInstance.accessTermByIndex(previousRightIndex);
-
-			typedef decltype(previousLeft.termFlags) TermFlagsType;
-	""";
-
-	string templateLeave = """return resultTerms;""";
 
 	string generated;
 
