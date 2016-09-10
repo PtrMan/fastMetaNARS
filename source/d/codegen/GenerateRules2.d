@@ -890,12 +890,12 @@ string generateDCodeForDeriver(RuleDescriptor ruleDescriptor) {
 
 	static string independentVariableCreation(string variableName) {
 		// TODO< map somehow the variables to integers and create temporary objects which describe them >
-		return "TODO";
+		return "TODO<independent variable creation>";
 	}
 
 	static string dependentVariableCreation(string variableName) {
 		// TODO< map somehow the variables to integers and create temporary objects which describe them >
-		return "TODO";
+		return "TODO<dependent variable creation>";
 	}
 
 	static string temporaryCompoundCreation(EnumCopulaForm copulaForm, string copulaCode, string[] arguments) {
