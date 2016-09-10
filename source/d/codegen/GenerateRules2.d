@@ -572,14 +572,6 @@ private RuleDescriptor[] translateParserRulesToRuleDescriptors(Parser.Rule[] par
 		return "";
 	}
 
-	string translateTruthFunctionToCppEnum(string truthFunction) {
-		assert(truthFunction[0..3] == ":t/");
-		string untranslated = truthFunction[3..$];
-
-		import std.array : replace;
-		import std.uni : toUpper;
-		return untranslated.replace("-", "").toUpper;
-	}
 
 
 
@@ -852,12 +844,17 @@ string generateDCodeForDeriver(RuleDescriptor ruleDescriptor) {
 		}
 	}
 
-	static string truthFunctionCode(string truthfunction) {
-		import std.stdio;
-		writeln(truthfunction);
+	static string truthFunctionCode(string truthFunction) {
+		static string translateTruthFunctionToCppEnum(string truthFunction) {
+			assert(truthFunction[0..3] == ":t/");
+			string untranslated = truthFunction[3..$];
 
+			import std.array : replace;
+			import std.uni : toUpper;
+			return untranslated.replace("-", "").toUpper;
+		}
 
-		assert(false, "TODO");
+		return translateTruthFunctionToCppEnum(truthFunction);
 	}
 
 	static string independentVariableCreation(string variableName) {
@@ -1132,7 +1129,7 @@ string generateCodeForDeriver(CodegenDelegates delegates, CodegenStringTemplates
 
 	foreach( iterationRuleResultWithPostconditionAndTruth; ruleDescriptor.ruleResultWithPostconditionAndTruth ) {
 		// TODO< put the string into the templates >
-		generated ~= "resultTerms ~= %s".format(nestedFnGetCodeOfCompoundCreationRecursivly(iterationRuleResultWithPostconditionAndTruth.resultTransformationElement)) ~ "\n";
+		generated ~= "resultTerms ~= %s".format(nestedFnGetStringOfTermForResult(iterationRuleResultWithPostconditionAndTruth)) ~ "\n";
 	}
 	
 
