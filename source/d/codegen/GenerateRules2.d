@@ -33,9 +33,6 @@ enum EnumOperationType {
 
 class RuleLexer : Lexer!EnumOperationType {
 	override protected Token!EnumOperationType createToken(uint ruleIndex, string matchedString) {
-		import std.stdio;
-		//writeln(matchedString);
-
 		Token!EnumOperationType token = new Token!EnumOperationType();
 
 		if( ruleIndex == 1 ) {
@@ -430,6 +427,7 @@ struct FlagsOfCopula {
 			nal1or2 = true;
 			arrowLeft = arrowRight = true;
 		}
+
 		return result;
 	}
 
@@ -818,16 +816,16 @@ string generateDCodeForDeriver(RuleDescriptor ruleDescriptor) {
 		if( flags.nal1or2 ) {
 			result ~= "cast(TermFlagsType)EnumTermFlags.NAL1OR2 |";
 		}
-		else if( flags.nal5 ) {
+		if( flags.nal5 ) {
 			result ~= "cast(TermFlagsType)EnumTermFlags.NAL5 |";
 		}
-		else if( flags.arrowLeft ) {
+		if( flags.arrowLeft ) {
 			result ~= "cast(TermFlagsType)EnumTermFlags.ARROWLEFT |";
 		}
-		else if( flags.arrowRight ) {
+		if( flags.arrowRight ) {
 			result ~= "cast(TermFlagsType)EnumTermFlags.ARROWRIGHT |";
 		}
-		else if( flags.isConjection ) {
+		if( flags.isConjection ) {
 			result ~= "cast(TermFlagsType)EnumTermFlags.CONJUNCTION |";
 		}
 
@@ -1086,10 +1084,6 @@ string generateCodeForDeriver(CodegenDelegates delegates, CodegenStringTemplates
 			throw new Exception("Internal Error");
 		}
 
-		
-		import std.stdio;
-		
-
 		return delegates.temporaryCompoundCreation(copulaForm, copulaAsString, [leftSideAsString, rightSideAsString]);
 	}
 
@@ -1107,11 +1101,6 @@ string generateCodeForDeriver(CodegenDelegates delegates, CodegenStringTemplates
 				throw new Exception("Internal Error - unknown compound form");
 			}
 		}
-
-		import std.stdio; // DEBUGING
-		writeln("nestedFnGetCodeOfCompoundCreationRecursivly():");
-		element.debugIt(0);
-
 
 		if( element.braceContent.length == 3 ) {
 			final switch(nestedFnGetCopulaForm()) with(EnumCopulaForm) {
@@ -1133,7 +1122,7 @@ string generateCodeForDeriver(CodegenDelegates delegates, CodegenStringTemplates
 
 	foreach( iterationRuleResultWithPostconditionAndTruth; ruleDescriptor.ruleResultWithPostconditionAndTruth ) {
 		// TODO< put the string into the templates >
-		generated ~= "resultTerms ~= %s".format(nestedFnGetStringOfTermForResult(iterationRuleResultWithPostconditionAndTruth)) ~ "\n";
+		generated ~= "resultTerms ~= %s".format(nestedFnGetStringOfTermForResult(iterationRuleResultWithPostconditionAndTruth)) ~ ";\n";
 	}
 	
 
