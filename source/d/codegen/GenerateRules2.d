@@ -482,7 +482,7 @@ struct RuleDescriptor {
 
 	RuleResultWithPostconditionAndTruth[] ruleResultWithPostconditionAndTruth;
 
-	Tuple!(EnumSource, EnumSource)[] toMatchInputTerms; // pairs of the sources which need to match that the rule fires 
+	Tuple!(EnumSource, EnumSource)[] toMatchPremiseTerms; // pairs of the sources which need to match that the rule fires 
 };
 
 import std.stdio;
@@ -510,7 +510,7 @@ private RuleDescriptor translateParserRuleToRuleDescriptor(Parser.Rule parserRul
 		foreach( iterationLeftMatching; leftMatching ) {
 			foreach( iterationRightMatching; rightMatching ) {
 				if( iterationLeftMatching[0] == iterationRightMatching[0] ) {
-					resultRuleDescriptor.toMatchInputTerms ~= Tuple!(EnumSource, EnumSource)(iterationLeftMatching[1], iterationRightMatching[1]);				
+					resultRuleDescriptor.toMatchPremiseTerms ~= Tuple!(EnumSource, EnumSource)(iterationLeftMatching[1], iterationRightMatching[1]);				
 				}
 			}
 		}
@@ -636,7 +636,7 @@ private RuleDescriptor[] translateParserRulesToRuleDescriptors(Parser.Rule[] par
 		foreach( iterationLeftMatching; leftMatching ) {
 			foreach( iterationRightMatching; rightMatching ) {
 				if( iterationLeftMatching[0] == iterationRightMatching[0] ) {
-					ruleDescriptorToAdd.toMatchInputTerms ~= Tuple!(EnumSource, EnumSource)(iterationLeftMatching[1], iterationRightMatching[1]);				
+					ruleDescriptorToAdd.toMatchPremiseTerms ~= Tuple!(EnumSource, EnumSource)(iterationLeftMatching[1], iterationRightMatching[1]);				
 				}
 			}
 		}
@@ -794,11 +794,15 @@ class CodegenDelegates {
 	// the arguments are already generated code
 	// copulaCode is generated code, too
 	string function(EnumCopulaForm copulaForm, string copulaCode, string[] arguments) temporaryCompoundCreation;
+
+	// has to generate the code for the matching of the premise of the derivation
+	string function(Tuple!(EnumSource, EnumSource)[] toMatchPremiseTerms) codeForPremisePatternMatching;
 }
 
 class CodegenStringTemplates {
 	string templateEntry, templateLeave;
 
+	string templateCheckEntry, templateCheckLeave;
 }
 
 string generateDCodeForDeriver(RuleDescriptor ruleDescriptor) {
@@ -875,6 +879,15 @@ string generateDCodeForDeriver(RuleDescriptor ruleDescriptor) {
 		return "genBinary(%s, %s, %s)".format(copulaCode, leftSideAsString, rightSideAsString);
 	}
 
+	static string codeForPremisePatternMatching(Tuple!(EnumSource, EnumSource)[] toMatchPremiseTerms) {
+		string nestedCodeForSourcePattern = "true";
+		foreach( iterationToMatchInputTerm; toMatchPremiseTerms ) {
+			nestedCodeForSourcePattern ~= format("&& (%s == %s)", getPremiseVariableForSource(iterationToMatchInputTerm[0]) ~ ".value", getPremiseVariableForSource(iterationToMatchInputTerm[1]) ~ ".value");
+		}
+
+		return nestedCodeForSourcePattern;
+	}
+
 
 	
 
@@ -887,6 +900,7 @@ string generateDCodeForDeriver(RuleDescriptor ruleDescriptor) {
 	delegates.independentVariableCreation = &independentVariableCreation;
 	delegates.dependentVariableCreation = &dependentVariableCreation;
 	delegates.temporaryCompoundCreation = &temporaryCompoundCreation;
+	delegates.codeForPremisePatternMatching = &codeForPremisePatternMatching;
 
 	CodegenStringTemplates stringTemplates = new CodegenStringTemplates;
 	stringTemplates.templateEntry = """
@@ -902,6 +916,23 @@ string generateDCodeForDeriver(RuleDescriptor ruleDescriptor) {
 	""";
 
 	stringTemplates.templateLeave = """return resultTerms;""";
+
+	stringTemplates.templateCheckEntry = """
+		if( 
+			// AUTOGEN< check flags for match >
+			(previousLeft.termFlags == (static_cast<decltype(previousLeft.termFlags)>(%s)) && previousRight.termFlags == (static_cast<decltype(previousLeft.termFlags)>(%s)))
+
+			// AUTOGEN< check for source pattern >
+			&& (%s)
+
+			// AUTOGEN check eventually for the unequal precondition
+			%s
+		) {
+	""";
+	
+
+	stringTemplates.templateCheckLeave = "}\n else \n";
+
 
 	return generateCodeForDeriver(delegates, stringTemplates, ruleDescriptor);
 }
@@ -1120,10 +1151,23 @@ string generateCodeForDeriver(CodegenDelegates delegates, CodegenStringTemplates
 		return "genTerm(%s, %s)".format(createdCompoundCode, delegates.truthFunctionCode(rule.postcondition.truthfunction));
 	}
 
+
+	string nestedCodeForUnequalCheck = "TODO";
+
+	generated ~= stringTemplates.templateCheckEntry.format( 
+		"TODO", //convertFlagsOfCopulaToFlags(ruleDescriptor.flagsOfSourceCopula[0]),
+		"TODO", //convertFlagsOfCopulaToFlags(ruleDescriptor.flagsOfSourceCopula[1]),
+		delegates.codeForPremisePatternMatching(ruleDescriptor.toMatchPremiseTerms),
+		nestedCodeForUnequalCheck
+	);
+
+
 	foreach( iterationRuleResultWithPostconditionAndTruth; ruleDescriptor.ruleResultWithPostconditionAndTruth ) {
 		// TODO< put the string into the templates >
 		generated ~= "resultTerms ~= %s".format(nestedFnGetStringOfTermForResult(iterationRuleResultWithPostconditionAndTruth)) ~ ";\n";
 	}
+
+	generated ~= stringTemplates.templateCheckLeave;
 	
 
 	generated ~= stringTemplates.templateLeave;
@@ -1187,7 +1231,7 @@ string generateCodeCppForDeriver(RuleDescriptor[] ruleDescriptors) {
 
 		string getNestedCodeForSourcePattern() {
 			string nestedCodeForSourcePattern = "true";
-			foreach( iterationToMatchInputTerm; ruleDescriptor.toMatchInputTerms ) {
+			foreach( iterationToMatchInputTerm; ruleDescriptor.toMatchPremiseTerms ) {
 				nestedCodeForSourcePattern ~= format("&& (%s == %s)", getVariableForSource(iterationToMatchInputTerm[0]) ~ ".value", getVariableForSource(iterationToMatchInputTerm[1]) ~ ".value");
 			}
 
