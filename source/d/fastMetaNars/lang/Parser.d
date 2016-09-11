@@ -1,10 +1,10 @@
-module lang.Parser;
+module fastMetaNars.lang.Parser;
 
 import std.typecons : Nullable;
 
-import lang.Token : Token;
-import lang.Lexer : Lexer;
-import lang.Line : Line;
+import fastMetaNars.lang.Token : Token;
+import fastMetaNars.lang.Lexer : Lexer;
+import fastMetaNars.lang.Line : Line;
 
 // just for debugging
 import std.stdio : writeln;

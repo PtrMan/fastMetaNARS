@@ -1,4 +1,4 @@
-module lang.Token;
+module fastMetaNars.lang.Token;
 
 import std.stdio : writeln;
 

@@ -1,4 +1,4 @@
-module ArrayStack;
+module fastMetaNars.memory.ArrayStack;
 
 // functions to handle an array as a stack
 

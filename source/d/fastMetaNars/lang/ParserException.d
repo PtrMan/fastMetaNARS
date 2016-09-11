@@ -1,4 +1,4 @@
-module lang.ParserException;
+module fastMetaNars.lang.ParserException;
 
 class ParserException : Exception {
 	final this(string message) {

@@ -1,8 +1,8 @@
-module lang.Lexer;
+module fastMetaNars.lang.Lexer;
 
 import std.regex;
 
-import lang.Token : Token;
+import fastMetaNars.lang.Token : Token;
 
 abstract class Lexer(EnumTokenOperationType) {
    public enum EnumLexerCode {

@@ -1,8 +1,10 @@
+module codegen.GenerateRules;
+
 import std.typecons : Nullable, Tuple;
 
-import lang.Parser : AbstractParser = Parser;
-import lang.Token : Token;
-import lang.Lexer : Lexer;
+import fastMetaNars.lang.Parser : AbstractParser = Parser;
+import fastMetaNars.lang.Token : Token;
+import fastMetaNars.lang.Lexer : Lexer;
 
 bool isOperation(const Token!EnumOperationType token, const EnumOperationType checkOperationType) {
 	return token.type == Token!EnumOperationType.EnumType.OPERATION && token.contentOperation == checkOperationType;
@@ -12,7 +14,7 @@ string getString(const Token!EnumOperationType token) {
 	return token.contentString;
 }
 
-import ArrayStack;
+import fastMetaNars.memory.ArrayStack;
 
 enum EnumOperationType {
 	BRACEOPEN,
