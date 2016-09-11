@@ -2,21 +2,12 @@ module fastMetaNars.Term;
 
 import fastMetaNars.FrequencyCertainty;
 import fastMetaNars.ReasonerInstance;
+import fastMetaNars.FlagsOfCopula;
 
-// TODO< TermReferer >
-// a term referer can be
-// - index of  compound
-// - id of variable, can be independent or dependent
 
 struct Compound {
-	// 11.09.2016 - this is outdated, we use the bitfield ike in the codegen for the deriver
-	enum EnumTermFlags {
-		INHERITANCE_TOLEFT = 1, // <--
-		INHERITANCE_TORIGHT = 2, // -->
-	}
-
 	size_t termTupleIndex; // TODO< doesn't have to have a native size, 32 bit are enough >
-	uint32_t termFlags; // EnumTermFlags
+	FlagsOfCopula flagsOfCopula;
 	CompoundId compoundId; // unique id of the compound, is not GC'ed
 
 	FrequencyCertainty frequencyCertainty;
@@ -41,7 +32,6 @@ struct Compound {
 		assert(dereferencedCompoundTuple.compoundIndices.length == 2, "only valid for binary compounds");
 		return dereferencedCompoundTuple.compoundIndices[1];
 	}
-
 }
 
 struct TermTuple {
