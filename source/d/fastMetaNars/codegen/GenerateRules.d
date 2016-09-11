@@ -743,7 +743,7 @@ class CodegenStringTemplates {
 
 string generateDCodeForDeriver(RuleDescriptor ruleDescriptor) {
 	static string signatureOpen() {
-		return "UnifiedTerm[] derive(ReasonerInstance reasonerInstance, UnifiedTermIndex[] leftPathTermIndices, UnifiedTermIndex[] rightPathTermIndices, float k) {";
+		return "TemporaryDerivedTerm[] derive(ReasonerInstance reasonerInstance, UnifiedTermIndex premiseLeftIndex, UnifiedTermIndex premiseRight) {";
 	}
 
 	static string signatureClose() {
@@ -832,12 +832,12 @@ string generateDCodeForDeriver(RuleDescriptor ruleDescriptor) {
 
 	CodegenStringTemplates stringTemplates = new CodegenStringTemplates;
 	stringTemplates.templateEntry = """
-			TemporaryUnifiedTerm[] resultTerms;
+			TemporaryDerivedTerm[] resultTerms;
 
-			UnifiedTermIndex premiseLeftIndex = leftPathTermIndices[$]; // AUTOGEN< need it to check for the flags of the left concept >
+			// uncommented because we dont need the paths   UnifiedTermIndex premiseLeftIndex = leftPathTermIndices[$]; // AUTOGEN< need it to check for the flags of the left concept >
 			UnifiedTerm premiseLeft = reasonerInstance.accessTermByIndex(premiseLeftIndex);
 
-			UnifiedTermIndex premiseRightIndex = rightPathTermIndices[$]; // AUTOGEN< need it to check for the flags of the right concept >
+			// uncommented because we dont need the paths   UnifiedTermIndex premiseRightIndex = rightPathTermIndices[$]; // AUTOGEN< need it to check for the flags of the right concept >
 			UnifiedTerm premiseRight = reasonerInstance.accessTermByIndex(premiseRightIndex);
 
 			alias typeof(previousLeft.termFlags) TermFlagsType;
