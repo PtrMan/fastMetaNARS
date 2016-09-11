@@ -743,7 +743,7 @@ class CodegenStringTemplates {
 
 string generateDCodeForDeriver(RuleDescriptor ruleDescriptor) {
 	static string signatureOpen() {
-		return "TemporaryDerivedTerm[] derive(ReasonerInstance reasonerInstance, UnifiedTermIndex premiseLeftIndex, UnifiedTermIndex premiseRight) {";
+		return "TemporaryDerivedTerm[] derive(ReasonerInstance reasonerInstancereasonerInstance, UnifiedTermIndex premiseLeftIndex, UnifiedTermIndex premiseRight) {";
 	}
 
 	static string signatureClose() {
@@ -768,10 +768,10 @@ string generateDCodeForDeriver(RuleDescriptor ruleDescriptor) {
 
 	static string getPremiseVariableForSource(EnumSource source) {
 		final switch(source) {
-			case EnumSource.ALEFT: return "premiseLeft.left";
-			case EnumSource.ARIGHT: return "premiseLeft.right";
-			case EnumSource.BLEFT: return "premiseRight.left";
-			case EnumSource.BRIGHT: return "premiseRight.right";
+			case EnumSource.ALEFT: return "premiseLeft.left(reasonerInstance)";
+			case EnumSource.ARIGHT: return "premiseLeft.right(reasonerInstance)";
+			case EnumSource.BLEFT: return "premiseRight.left(reasonerInstance)";
+			case EnumSource.BRIGHT: return "premiseRight.right(reasonerInstance)";
 		}
 	}
 
@@ -811,7 +811,7 @@ string generateDCodeForDeriver(RuleDescriptor ruleDescriptor) {
 	static string codeForPremisePatternMatching(Tuple!(EnumSource, EnumSource)[] toMatchPremiseTerms) {
 		string nestedCodeForSourcePattern = "true";
 		foreach( iterationToMatchInputTerm; toMatchPremiseTerms ) {
-			nestedCodeForSourcePattern ~= format("&& (%s == %s)", getPremiseVariableForSource(iterationToMatchInputTerm[0]) ~ ".value", getPremiseVariableForSource(iterationToMatchInputTerm[1]) ~ ".value");
+			nestedCodeForSourcePattern ~= format("&& (%s == %s)", getPremiseVariableForSource(iterationToMatchInputTerm[0]) ~ ".compoundId", getPremiseVariableForSource(iterationToMatchInputTerm[1]) ~ ".compoundId");
 		}
 
 		return nestedCodeForSourcePattern;
@@ -834,13 +834,8 @@ string generateDCodeForDeriver(RuleDescriptor ruleDescriptor) {
 	stringTemplates.templateEntry = """
 			TemporaryDerivedTerm[] resultTerms;
 
-			// uncommented because we dont need the paths   UnifiedTermIndex premiseLeftIndex = leftPathTermIndices[$]; // AUTOGEN< need it to check for the flags of the left concept >
-			UnifiedTerm premiseLeft = reasonerInstance.accessTermByIndex(premiseLeftIndex);
-
-			// uncommented because we dont need the paths   UnifiedTermIndex premiseRightIndex = rightPathTermIndices[$]; // AUTOGEN< need it to check for the flags of the right concept >
-			UnifiedTerm premiseRight = reasonerInstance.accessTermByIndex(premiseRightIndex);
-
-			alias typeof(previousLeft.termFlags) TermFlagsType;
+			Compound premiseLeft = reasonerInstance.accessCompoundByIndex(premiseLeftIndex);
+			Compound premiseRight = reasonerInstance.accessCompoundByIndex(premiseRightIndex);
 	""";
 
 	stringTemplates.templateLeave = """return resultTerms;""";
@@ -848,7 +843,7 @@ string generateDCodeForDeriver(RuleDescriptor ruleDescriptor) {
 	stringTemplates.templateCheckEntry = """
 		if( 
 			// AUTOGEN< check flags for match >
-			(previousLeft.termFlags == (cast(typeof(previousLeft.termFlags))(%s)) && previousRight.termFlags == (cast(typeof(previousLeft.termFlags))(%s)))
+			((premiseLeft.flagsOfCopula == %s) && (premiseRight.flagsOfCopula == %s))
 
 			// AUTOGEN< check for source pattern >
 			&& (%s)
