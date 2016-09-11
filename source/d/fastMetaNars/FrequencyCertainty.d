@@ -1,8 +1,6 @@
 module fastMetaNars.FrequencyCertainty;
 
 struct FrequencyCertainty {
-	final this() {}
-
 	final this(float frequency, float certainty) {
 		this.frequency = frequency;
 		this.certainty = certainty;

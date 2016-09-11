@@ -1,5 +1,7 @@
 module fastMetaNars.TermReferer;
 
+import std.stdint;
+
 // a term referer can be
 // - index of  compound
 // - id of variable, can be independent or dependent
@@ -8,8 +10,8 @@ struct TermReferer {
 
 	private EncodingType encoding;
 
-	private const uint NUMBEROFBITSFORID = 28; // enough concepts for now
-	private const EncodingType BITMAKSFORID = bitmaskForBits!EncodingType(NUMBEROFBITSFORID);
+	private static const uint NUMBEROFBITSFORID = 28; // enough concepts for now
+	private static const EncodingType BITMAKSFORID = bitmaskForBits!EncodingType(NUMBEROFBITSFORID);
 
 	private enum EnumSpecialMaskBits {
 		ATOMICTERM = NUMBEROFBITSFORID + 1, // for atomic terms
@@ -20,7 +22,7 @@ struct TermReferer {
 	static TermReferer makeAtomic(EncodingType value) {
 		assert(value & (!BITMAKSFORID));
 		TermReferer result;
-		result.encoding = value | (1 << ATOMICTERM);
+		result.encoding = value | (1 << EnumSpecialMaskBits.ATOMICTERM);
 		return result;
 	}
 
@@ -34,19 +36,21 @@ struct TermReferer {
 	static TermReferer makeIndependentVariable(EncodingType value) {
 		assert(value & (!BITMAKSFORID));
 		TermReferer result;
-		result.encoding = value | (1 << INDEPENDENTVAR);
+		result.encoding = value | (1 << EnumSpecialMaskBits.INDEPENDENTVAR);
 		return result;
 	}
 
 	static TermReferer makeDependentVariable(EncodingType value) {
 		assert(value & (!BITMAKSFORID));
 		TermReferer result;
-		result.encoding = value | (1 << DEPENDENTVAR);
+		result.encoding = value | (1 << EnumSpecialMaskBits.DEPENDENTVAR);
 		return result;
 	}
 
 	// flags must not overlap with the id
-	static assert(BITMAKSFORID & (1 << EnumSpecialMaskBits.ATOMICTERM)) == 0);
+	static assert((BITMAKSFORID & (1 << EnumSpecialMaskBits.ATOMICTERM)) == 0);
+	static assert((BITMAKSFORID & (1 << EnumSpecialMaskBits.INDEPENDENTVAR)) == 0);
+	static assert((BITMAKSFORID & (1 << EnumSpecialMaskBits.DEPENDENTVAR)) == 0);
 
 	// helper, TODO< move to other file >
 	static private Type bitmaskForBits(Type)(uint bits) {
@@ -93,11 +97,11 @@ struct TermReferer {
 		return maskOutId();
 	}
 
-	final protected checkFlag(EnumSpecialMaskBits maskIndex) {
+	final protected bool checkFlag(EnumSpecialMaskBits maskIndex) pure {
 		return (encoding & (1 << maskIndex)) != 0;
 	}
 
-	final protected maskOutId() pure {
-		return encoding & bitmaskForBits!EncodingType(NUMBEROFBITSFORID);
+	final protected EncodingType maskOutId() pure {
+		return encoding & BITMAKSFORID;
 	}
 }

@@ -1,14 +1,19 @@
 module fastMetaNars.Term;
 
+import std.stdint;
+
 import fastMetaNars.FrequencyCertainty;
 import fastMetaNars.ReasonerInstance;
 import fastMetaNars.FlagsOfCopula;
+import fastMetaNars.TermReferer;
 
 
 struct Compound {
+	alias uint64_t CompoundIdType;
+
 	size_t termTupleIndex; // TODO< doesn't have to have a native size, 32 bit are enough >
 	FlagsOfCopula flagsOfCopula;
-	CompoundId compoundId; // unique id of the compound, is not GC'ed
+	CompoundIdType compoundId; // unique id of the compound, is not GC'ed
 
 	FrequencyCertainty frequencyCertainty;
 
