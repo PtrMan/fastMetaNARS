@@ -720,7 +720,7 @@ class CodegenDelegates {
 	string function() signatureOpen;
 	string function() signatureClose;
 
-	string function(FlagsOfCopula flags) convertFlagsOfCopulaToFlags;
+	string function(FlagsOfCopula flags) convertFlagsOfCopulaToCtor;
 	string function(EnumSource source) getPremiseVariableForSource;
 	string function(string truthfunction) truthFunctionCode; // gets the raw truthfunction key as in the clojure like DSL, has to return an Enum value in the target language
 
@@ -750,26 +750,19 @@ string generateDCodeForDeriver(RuleDescriptor ruleDescriptor) {
 		return "}";
 	}
 
-	static string convertFlagsOfCopulaToFlags(FlagsOfCopula flags) {
+	static string convertFlagsOfCopulaToCtor(FlagsOfCopula flags) {
 		string result;
 
-		if( flags.nal1or2 ) {
-			result ~= "cast(TermFlagsType)EnumTermFlags.NAL1OR2 |";
-		}
-		if( flags.nal5 ) {
-			result ~= "cast(TermFlagsType)EnumTermFlags.NAL5 |";
-		}
-		if( flags.arrowLeft ) {
-			result ~= "cast(TermFlagsType)EnumTermFlags.ARROWLEFT |";
-		}
-		if( flags.arrowRight ) {
-			result ~= "cast(TermFlagsType)EnumTermFlags.ARROWRIGHT |";
-		}
-		if( flags.isConjection ) {
-			result ~= "cast(TermFlagsType)EnumTermFlags.CONJUNCTION |";
-		}
+		result ~= "FlagsOfCopula(";
 
-		result = result[0..$-1];
+		result ~= (flags.nal1or2 ? "true" : "false") ~ ",";
+		result ~= (flags.nal5 ? "true" : "false") ~ ",";
+		result ~= (flags.arrowLeft ? "true" : "false") ~ ",";
+		result ~= (flags.arrowRight ? "true" : "false") ~ ",";
+		result ~= (flags.isConjection ? "true" : "false");
+
+		result ~= ")";
+
 		return result;
 	}
 
@@ -830,7 +823,7 @@ string generateDCodeForDeriver(RuleDescriptor ruleDescriptor) {
 	CodegenDelegates delegates = new CodegenDelegates;
 	delegates.signatureOpen = &signatureOpen;
 	delegates.signatureClose = &signatureClose;
-	delegates.convertFlagsOfCopulaToFlags = &convertFlagsOfCopulaToFlags;
+	delegates.convertFlagsOfCopulaToCtor = &convertFlagsOfCopulaToCtor;
 	delegates.getPremiseVariableForSource = &getPremiseVariableForSource;
 	delegates.truthFunctionCode = &truthFunctionCode;
 	delegates.variableCreation = &variableCreation;
@@ -1046,7 +1039,7 @@ string generateCodeForDeriver(CodegenDelegates delegates, CodegenStringTemplates
 	string delegate(Element element) nestedFnGetCodeOfCompoundCreationRecursivly;
 
 	string nestedFnGetCodeOfBinaryCompoundCreationRecursivly(EnumCopulaForm copulaForm, Element copulaElement, Element leftSideElement, Element rightSideElement) {
-		string copulaAsString = delegates.convertFlagsOfCopulaToFlags(convertCopulaElementToFlagsOfCopula(copulaElement));
+		string copulaAsString = delegates.convertFlagsOfCopulaToCtor(convertCopulaElementToFlagsOfCopula(copulaElement));
 
 		string leftSideAsString, rightSideAsString;
 
@@ -1118,8 +1111,8 @@ string generateCodeForDeriver(CodegenDelegates delegates, CodegenStringTemplates
 		Element rightPremiseCompoundCopulaElement = ruleDescriptor.rightPremiseElement.walk([]).getNonprefixCopulaElement;
 		
 		generated ~= stringTemplates.templateCheckEntry.format( 
-			delegates.convertFlagsOfCopulaToFlags(convertCopulaElementToFlagsOfCopula(leftPremiseCompoundCopulaElement)), //convertFlagsOfCopulaToFlags(ruleDescriptor.flagsOfSourceCopula[0]),
-			delegates.convertFlagsOfCopulaToFlags(convertCopulaElementToFlagsOfCopula(rightPremiseCompoundCopulaElement)), //convertFlagsOfCopulaToFlags(ruleDescriptor.flagsOfSourceCopula[1]),
+			delegates.convertFlagsOfCopulaToCtor(convertCopulaElementToFlagsOfCopula(leftPremiseCompoundCopulaElement)), //convertFlagsOfCopulaToCtor(ruleDescriptor.flagsOfSourceCopula[0]),
+			delegates.convertFlagsOfCopulaToCtor(convertCopulaElementToFlagsOfCopula(rightPremiseCompoundCopulaElement)), //convertFlagsOfCopulaToCtor(ruleDescriptor.flagsOfSourceCopula[1]),
 			delegates.codeForPremisePatternMatching(ruleDescriptor.toMatchPremiseTerms),
 			nestedCodeForUnequalCheck
 		);
@@ -1193,8 +1186,8 @@ string generateCodeCppForDeriver(RuleDescriptor[] ruleDescriptors) {
 
 
 		emittedCode ~= format(templateCheckEntry, 
-			convertFlagsOfCopulaToFlags(ruleDescriptor.flagsOfSourceCopula[0]),
-			convertFlagsOfCopulaToFlags(ruleDescriptor.flagsOfSourceCopula[1]),
+			convertFlagsOfCopulaToCtor(ruleDescriptor.flagsOfSourceCopula[0]),
+			convertFlagsOfCopulaToCtor(ruleDescriptor.flagsOfSourceCopula[1]),
 			getNestedCodeForSourcePattern(),
 			nestedCodeForUnequalCheck
 		);
@@ -1206,7 +1199,7 @@ string generateCodeCppForDeriver(RuleDescriptor[] ruleDescriptors) {
 		emittedCode ~= format(templateRuletableGeneralizedBinary,
 			convertSourceToCpp(ruleDescriptor.sourceLeft),
 			convertSourceToCpp(ruleDescriptor.sourceRight),
-			convertFlagsOfCopulaToFlags(ruleDescriptor.flagsOfTargetCopula),
+			convertFlagsOfCopulaToCtor(ruleDescriptor.flagsOfTargetCopula),
 			ruleDescriptor.rule
 		);
 
