@@ -782,7 +782,7 @@ string generateDCodeForDeriver(RuleDescriptor ruleDescriptor) {
 
 			import std.array : replace;
 			import std.uni : toUpper;
-			return untranslated.replace("-", "").toUpper;
+			return "RuleTable.EnumTruthFunction." ~ untranslated.replace("-", "").toUpper;
 		}
 
 		return translateTruthFunctionToEnum(truthFunction);
