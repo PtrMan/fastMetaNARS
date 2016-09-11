@@ -755,6 +755,11 @@ enum EnumCopulaForm {
 	NONPRFIX, // example : (A --> B)
 }
 
+enum EnumVariableType {
+	INDEPENDENT,
+	DEPENDENT,
+}
+
 // generates the target code (currently C++) for the "deriver"(which currently just does some pretty basic things)
 
 class CodegenDelegates {
@@ -767,8 +772,7 @@ class CodegenDelegates {
 	string function(EnumSource source) getPremiseVariableForSource;
 	string function(string truthfunction) truthFunctionCode; // gets the raw truthfunction key as in the clojure like DSL, has to return an Enum value in the target language
 
-	string function(string variableName) independentVariableCreation; // has to generate the code for the generation of the variable with the specific name
-	string function(string variableName) dependentVariableCreation;
+	string function(EnumVariableType variableType, uint variableIndex) variableCreation; // has to generate the code for the referencing of the variable with the specific id
 
 	// generates code for the creation of a temporary compound which is returned from the deriver
 	// the arguments are already generated code
@@ -839,14 +843,14 @@ string generateDCodeForDeriver(RuleDescriptor ruleDescriptor) {
 		return translateTruthFunctionToEnum(truthFunction);
 	}
 
-	static string independentVariableCreation(string variableName) {
-		// TODO< map somehow the variables to integers and create temporary objects which describe them >
-		return "TODO<independent variable creation>";
-	}
-
-	static string dependentVariableCreation(string variableName) {
-		// TODO< map somehow the variables to integers and create temporary objects which describe them >
-		return "TODO<dependent variable creation>";
+	static string variableCreation(EnumVariableType variableType, uint variableIndex) {
+		if( variableType == EnumVariableType.INDEPENDENT ) {
+			return "makeReferenceIndependentVariable(%s)".format(variableIndex);
+		}
+		else {
+			assert(variableType == EnumVariableType.DEPENDENT);
+			return "makeReferenceDependentVariable(%s)".format(variableIndex);
+		}
 	}
 
 	static string temporaryCompoundCreation(EnumCopulaForm copulaForm, string copulaCode, string[] arguments) {
@@ -877,8 +881,7 @@ string generateDCodeForDeriver(RuleDescriptor ruleDescriptor) {
 	delegates.convertFlagsOfCopulaToFlags = &convertFlagsOfCopulaToFlags;
 	delegates.getPremiseVariableForSource = &getPremiseVariableForSource;
 	delegates.truthFunctionCode = &truthFunctionCode;
-	delegates.independentVariableCreation = &independentVariableCreation;
-	delegates.dependentVariableCreation = &dependentVariableCreation;
+	delegates.variableCreation = &variableCreation;
 	delegates.temporaryCompoundCreation = &temporaryCompoundCreation;
 	delegates.codeForPremisePatternMatching = &codeForPremisePatternMatching;
 
@@ -985,6 +988,16 @@ string generateCodeForDeriver(CodegenDelegates delegates, CodegenStringTemplates
 	generated ~= delegates.signatureOpen() ~ "\n";
 	generated ~= stringTemplates.templateEntry;
 
+	uint lookupVariable(EnumVariableType variableType, string name) {
+		// TODO< realize real lookup for the 5% of the rules >
+		// for this we need to store all variables of the rule into a dictionary
+		// then we need to make a lookup here
+
+		// we return just zero because in most rules we just use one variable
+		return 0;
+	}
+
+
 	static FlagsOfCopula convertCopulaElementToFlagsOfCopula(Element copulaElement) {
 		assert(copulaElement.isCopula);
 		
@@ -1066,10 +1079,10 @@ string generateCodeForDeriver(CodegenDelegates delegates, CodegenStringTemplates
 		Token!EnumOperationType token = tokenWithDecoration.token;
 
 		if( tokenWithDecoration.isIndependentVariable ) {
-			return delegates.independentVariableCreation(token.contentString);
+			return delegates.variableCreation(EnumVariableType.INDEPENDENT, lookupVariable(EnumVariableType.INDEPENDENT, token.contentString));
 		}
 		else if( tokenWithDecoration.isDependentVariable ) {
-			return delegates.dependentVariableCreation(token.contentString);
+			return delegates.variableCreation(EnumVariableType.DEPENDENT, lookupVariable(EnumVariableType.DEPENDENT, token.contentString));
 		}
 		else {
 			EnumSource sourceOfPremiseVariable = getSourceOfPremiseVariableByName(token.contentString);
