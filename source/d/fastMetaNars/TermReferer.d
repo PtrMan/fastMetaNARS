@@ -87,6 +87,19 @@ struct TermReferer {
 		return maskOutId();
 	}
 
+	// provides more generalization than just getAtomic and getTerm
+	// ASK< maybe we should just reference terms? >
+	final @property EncodingType getAtomicOrTerm() pure {
+		assert(!isSpecial);
+		return maskOutId();
+	}
+
+	// provides more generalization than just getAtomic and getTerm
+	// ASK< maybe we should just reference terms? >
+	final @property EncodingType getMaskedOutId() pure {
+		return maskOutId();
+	}
+
 	final @property EncodingType getDependentVariable() pure {
 		assert(!isAtomic && isDependentVariable);
 		return maskOutId();
