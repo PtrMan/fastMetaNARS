@@ -25,6 +25,10 @@ struct FlagsOfCopula {
 		return result;
 	}
 
+	final @property bool isInheritance() pure {
+		return nal1or2 && arrowRight && !arrowLeft;
+	}
+
 	static FlagsOfCopula makeSimilarity() {
 		FlagsOfCopula result;
 		with(result) {
@@ -35,6 +39,11 @@ struct FlagsOfCopula {
 		return result;
 	}
 
+	final @property bool isSimilarity() pure {
+		return nal1or2 && arrowRight && arrowLeft;
+	}
+
+
 	static FlagsOfCopula makeImplication() {
 		FlagsOfCopula result;
 		with(result) {
@@ -42,6 +51,10 @@ struct FlagsOfCopula {
 			arrowRight = true;
 		}
 		return result;
+	}
+
+	final @property bool isImplication() pure {
+		return nal5 && arrowRight && !arrowLeft;
 	}
 
 	static FlagsOfCopula makeEquivalence() {
@@ -53,9 +66,15 @@ struct FlagsOfCopula {
 		return result;
 	}
 
+	final @property bool isEquivalence() pure {
+		return nal5 && arrowRight && arrowLeft;
+	}
+
+
 	static FlagsOfCopula makeConjuction() {
 		FlagsOfCopula result;
 		result.isConjection = true;
 		return result;
 	}
+
 }
