@@ -752,7 +752,7 @@ class CodegenStringTemplates {
 
 string generateDCodeForDeriver(RuleDescriptor ruleDescriptor) {
 	static string signatureOpen() {
-		return "TemporaryDerivedTerm*[] derive(ReasonerInstance reasonerInstance, UnifiedTermIndex premiseLeftIndex, UnifiedTermIndex premiseRight) {";
+		return "TemporaryDerivedTerm*[] derive(ReasonerInstance reasonerInstance, UnifiedTermIndex premiseLeftIndex, UnifiedTermIndex premiseRightIndex) {";
 	}
 
 	static string signatureClose() {
@@ -820,7 +820,7 @@ string generateDCodeForDeriver(RuleDescriptor ruleDescriptor) {
 	static string codeForPremisePatternMatching(Tuple!(EnumSource, EnumSource)[] toMatchPremiseTerms) {
 		string nestedCodeForSourcePattern = "true";
 		foreach( iterationToMatchInputTerm; toMatchPremiseTerms ) {
-			nestedCodeForSourcePattern ~= format("&& (%s == %s)", getPremiseVariableForSource(iterationToMatchInputTerm[0]) ~ ".compoundId", getPremiseVariableForSource(iterationToMatchInputTerm[1]) ~ ".compoundId");
+			nestedCodeForSourcePattern ~= format("&& (%s == %s)", getPremiseVariableForSource(iterationToMatchInputTerm[0]), getPremiseVariableForSource(iterationToMatchInputTerm[1]));
 		}
 
 		return nestedCodeForSourcePattern;
@@ -846,7 +846,7 @@ string generateDCodeForDeriver(RuleDescriptor ruleDescriptor) {
 	import fastMetaNars.ReasonerInstance;
 	import fastMetaNars.Term;
 	import fastMetaNars.FlagsOfCopula;
-	import fastMetaNars.Ruletable;
+	import fastMetaNars.RuleTable;
 
 
 	import fastMetaNars.deriver.DeriverUtils;
