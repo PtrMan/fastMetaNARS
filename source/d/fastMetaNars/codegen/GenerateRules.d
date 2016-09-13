@@ -752,7 +752,7 @@ class CodegenStringTemplates {
 
 string generateDCodeForDeriver(RuleDescriptor ruleDescriptor) {
 	static string signatureOpen() {
-		return "TemporaryDerivedTerm[] derive(ReasonerInstance reasonerInstance, UnifiedTermIndex premiseLeftIndex, UnifiedTermIndex premiseRight) {";
+		return "TemporaryDerivedTerm*[] derive(ReasonerInstance reasonerInstance, UnifiedTermIndex premiseLeftIndex, UnifiedTermIndex premiseRight) {";
 	}
 
 	static string signatureClose() {
@@ -846,6 +846,7 @@ string generateDCodeForDeriver(RuleDescriptor ruleDescriptor) {
 	import fastMetaNars.ReasonerInstance;
 	import fastMetaNars.Term;
 	import fastMetaNars.FlagsOfCopula;
+	import fastMetaNars.Ruletable;
 
 
 	import fastMetaNars.deriver.DeriverUtils;
@@ -855,7 +856,7 @@ string generateDCodeForDeriver(RuleDescriptor ruleDescriptor) {
 	""";
 
 	stringTemplates.templateEntry = """
-			TemporaryDerivedTerm[] resultTerms;
+			TemporaryDerivedTerm*[] resultTerms;
 
 			Compound* premiseLeft = reasonerInstance.accessCompoundByIndex(premiseLeftIndex);
 			Compound* premiseRight = reasonerInstance.accessCompoundByIndex(premiseRightIndex);
@@ -877,7 +878,7 @@ string generateDCodeForDeriver(RuleDescriptor ruleDescriptor) {
 	""";
 	
 
-	stringTemplates.templateCheckLeave = "}\n else \n";
+	stringTemplates.templateCheckLeave = "}\n";
 
 
 	return generateCodeForDeriver(delegates, stringTemplates, ruleDescriptor);
