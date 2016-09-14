@@ -12,6 +12,9 @@ import fastMetaNars.TermReferer;
 struct Compound {
 	alias uint64_t CompoundIdType;
 
+	static const uint COMPLEXITYINDEPENDENTVARIABLE = 1;
+	static const uint COMPLEXITYDEPENDENTVARIABLE = 1;
+
 	FlagsOfCopula flagsOfCopula;
 
 	CompoundIdType compoundId; // unique id of the compound, is not GC'ed, used for hash calc

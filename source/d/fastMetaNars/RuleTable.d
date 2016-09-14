@@ -3,9 +3,12 @@ module fastMetaNars.RuleTable;
 struct RuleTable {
 	enum EnumTruthFunction {
 		REVISION,
-		COMPARISION,
+		COMPARISON,
 		ANALOGY,
 		ANALOGYTICK,
-		DEDUCTION2
+		DEDUCTION2,
+		ABDUCTION,
+		INDUCTION,
+		INTERSECTION,
 	}
 }
