@@ -3,7 +3,7 @@ module fastMetaNars.FlagsOfCopulaConvertToString;
 import fastMetaNars.FlagsOfCopula;
 
 string convToHumanString(FlagsOfCopula flagsOfCopula) {
-	if( flagsOfCopula.isImplication ) {
+	if( flagsOfCopula.isInheritance ) {
 		return "-->";
 	}
 	else if( flagsOfCopula.isSimilarity ) {
