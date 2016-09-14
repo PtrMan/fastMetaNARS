@@ -5,9 +5,10 @@ import std.format : format;
 import fastMetaNars.ReasonerInstance;
 import fastMetaNars.FlagsOfCopula;
 import fastMetaNars.FlagsOfCopulaConvertToString;
-//import fastMetaNars.FlagsOfCopulaComplexity;
+import fastMetaNars.FlagsOfCopulaComplexity;
 import fastMetaNars.TermReferer;
 import fastMetaNars.RuleTable;
+import fastMetaNars.Term;
 
 struct TemporaryDerivedCompound {
 	enum EnumType {
@@ -72,7 +73,6 @@ struct TemporaryDerivedCompound {
 		}
 	}
 
-	/* uncommented because duplicated code
 	final uint calcComplexityRecursive(ReasonerInstance reasonerInstance) {
 		if( isLeaf ) {
 			return reasonerInstance.getTermComplexityOfAndByTermReferer(termReferer);
@@ -91,7 +91,7 @@ struct TemporaryDerivedCompound {
 			complexity += rightChildren.calcComplexityRecursive(reasonerInstance);
 			return complexity;
 		}
-	}*/
+	}
 
 	EnumType type;
 	FlagsOfCopula flagsOfCopula; // TODO< accessor >
@@ -120,6 +120,11 @@ struct TemporaryDerivedCompound {
 	final @property bool isDependentVariable() pure {
 		return type == EnumType.DEPENDENTVARIABLE;
 	}
+
+	final @property bool isVariable() pure {
+		return isIndependentVariable || isDependentVariable;
+	}
+
 
 	uint termComplexity;
 
