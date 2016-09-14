@@ -20,28 +20,28 @@ struct TermReferer {
 	}
 
 	static TermReferer makeAtomic(EncodingType value) {
-		assert(value & (!BITMAKSFORID));
+		assert((value & (!BITMAKSFORID)) == 0);
 		TermReferer result;
 		result.encoding = value | (1 << EnumSpecialMaskBits.ATOMICTERM);
 		return result;
 	}
 
 	static TermReferer makeNonatomic(EncodingType value) {
-		assert(value & (!BITMAKSFORID));
+		assert((value & (!BITMAKSFORID)) == 0);
 		TermReferer result;
 		result.encoding = value;
 		return result;
 	}
 
 	static TermReferer makeIndependentVariable(EncodingType value) {
-		assert(value & (!BITMAKSFORID));
+		assert((value & (!BITMAKSFORID)) == 0);
 		TermReferer result;
 		result.encoding = value | (1 << EnumSpecialMaskBits.INDEPENDENTVAR);
 		return result;
 	}
 
 	static TermReferer makeDependentVariable(EncodingType value) {
-		assert(value & (!BITMAKSFORID));
+		assert((value & (!BITMAKSFORID)) == 0);
 		TermReferer result;
 		result.encoding = value | (1 << EnumSpecialMaskBits.DEPENDENTVAR);
 		return result;
