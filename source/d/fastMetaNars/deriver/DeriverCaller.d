@@ -49,7 +49,7 @@ void deriverCaller(ReasonerInstance reasonerInstance, UnifiedTermIndex premiseLe
 	}
 
 	// filter by maximal term complexity
-	auto filteredTerms = temporaryDerivedTerms; //temporaryDerivedTerms.filter!(a => a.derivedCompound.termComplexity <= reasonerInstance.configuration.maximalTermComplexity);
+	auto filteredTerms = temporaryDerivedTerms.filter!(a => a.derivedCompound.termComplexity <= reasonerInstance.configuration.maximalTermComplexity);
 
 	// debug
 	// for now we just dump the TemporaryDerivedCompounds and the compounds they reference

@@ -17,6 +17,8 @@ void main() {
 	reasonerInstance.humanReadableConcepts[1] = "b";
 	reasonerInstance.humanReadableConcepts[2] = "c";
 
+	reasonerInstance.configuration.maximalTermComplexity = 50;	
+
 	
 
 	reasonerInstance.compounds[0].thisTermReferer = TermReferer.makeAtomic(0);
