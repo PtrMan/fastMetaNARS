@@ -33,6 +33,8 @@ struct Compound {
 	uint32_t termTupleIndex;
 	uint32_t cachedHash;
 
+	version(DEBUG) bool cachedHashValid;
+
 	final void updateHash(ReasonerInstance reasonerInstance) {
 		assert(false, "TODO");
 	}
