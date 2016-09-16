@@ -42,6 +42,17 @@ class Hashtable(Type, uint Buckets) {
 
 		return false;
 	}
+
+	final bool existHash(uint hash) {
+		uint bucketIndex = hash % Buckets;
+		foreach( BucketElement iterationBucketElement; buckets[bucketIndex].content ) {
+			if( iterationBucketElement.hash == hashForElement ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
 	
 	final public Type[] get(uint hash) {
 		Type[] result;
