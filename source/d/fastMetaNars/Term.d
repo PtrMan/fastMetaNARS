@@ -7,7 +7,7 @@ import fastMetaNars.FrequencyCertainty;
 import fastMetaNars.ReasonerInstance;
 import fastMetaNars.FlagsOfCopula;
 import fastMetaNars.FlagsOfCopulaConvertToString;
-import fastMetaNars.TermReferer;
+import fastMetaNars.TermOrCompoundTermOrVariableReferer;
 
 struct Compound {
 	alias uint64_t CompoundIdType;
@@ -20,7 +20,7 @@ struct Compound {
 	CompoundIdType compoundId; // unique id of the compound, is not GC'ed, used for hash calc
 
 	
-	TermReferer thisTermReferer; // term referer describing this compound
+	TermOrCompoundTermOrVariableReferer thisTermReferer; // term referer describing this compound
 	                             // contains the id which is compound-gc'ed
 
 	// TODO 12.09.2016 < move this into term >
@@ -39,14 +39,14 @@ struct Compound {
 		assert(false, "TODO");
 	}
 
-	final TermReferer left(ReasonerInstance reasonerInstance) const {
+	final TermOrCompoundTermOrVariableReferer left(ReasonerInstance reasonerInstance) const {
 		TermTuple* dereferencedCompoundTuple = reasonerInstance.accessTermTupleByIndex(termTupleIndex);
 
 		assert(dereferencedCompoundTuple.compoundIndices.length == 2, "only valid for binary compounds");
 		return dereferencedCompoundTuple.compoundIndices[0];
 	}
 
-	final TermReferer right(ReasonerInstance reasonerInstance) const {
+	final TermOrCompoundTermOrVariableReferer right(ReasonerInstance reasonerInstance) const {
 		TermTuple* dereferencedCompoundTuple = reasonerInstance.accessTermTupleByIndex(termTupleIndex);
 
 		assert(dereferencedCompoundTuple.compoundIndices.length == 2, "only valid for binary compounds");
@@ -87,5 +87,5 @@ struct Compound {
 }
 
 struct TermTuple {
-	TermReferer[] compoundIndices; // compound-gc'ed
+	TermOrCompoundTermOrVariableReferer[] compoundIndices; // compound-gc'ed
 }

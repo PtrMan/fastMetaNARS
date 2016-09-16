@@ -1,11 +1,11 @@
-module fastMetaNars.TermReferer;
+module fastMetaNars.TermOrCompoundTermOrVariableReferer;
 
 import std.stdint;
 
 // a term referer can be
 // - index of  compound
 // - id of variable, can be independent or dependent
-struct TermReferer {
+struct TermOrCompoundTermOrVariableReferer {
 	alias uint64_t EncodingType;
 
 	private EncodingType encoding;
@@ -19,30 +19,30 @@ struct TermReferer {
 		DEPENDENTVAR,
 	}
 
-	static TermReferer makeAtomic(EncodingType value) {
+	static TermOrCompoundTermOrVariableReferer makeAtomic(EncodingType value) {
 		assert((value & (!BITMAKSFORID)) == 0);
-		TermReferer result;
+		TermOrCompoundTermOrVariableReferer result;
 		result.encoding = value | (1 << EnumSpecialMaskBits.ATOMICTERM);
 		return result;
 	}
 
-	static TermReferer makeNonatomic(EncodingType value) {
+	static TermOrCompoundTermOrVariableReferer makeNonatomic(EncodingType value) {
 		assert((value & (!BITMAKSFORID)) == 0);
-		TermReferer result;
+		TermOrCompoundTermOrVariableReferer result;
 		result.encoding = value;
 		return result;
 	}
 
-	static TermReferer makeIndependentVariable(EncodingType value) {
+	static TermOrCompoundTermOrVariableReferer makeIndependentVariable(EncodingType value) {
 		assert((value & (!BITMAKSFORID)) == 0);
-		TermReferer result;
+		TermOrCompoundTermOrVariableReferer result;
 		result.encoding = value | (1 << EnumSpecialMaskBits.INDEPENDENTVAR);
 		return result;
 	}
 
-	static TermReferer makeDependentVariable(EncodingType value) {
+	static TermOrCompoundTermOrVariableReferer makeDependentVariable(EncodingType value) {
 		assert((value & (!BITMAKSFORID)) == 0);
-		TermReferer result;
+		TermOrCompoundTermOrVariableReferer result;
 		result.encoding = value | (1 << EnumSpecialMaskBits.DEPENDENTVAR);
 		return result;
 	}
@@ -122,7 +122,7 @@ struct TermReferer {
 		return encoding & ~BITMAKSFORID;
 	}
 
-	static bool isSameWithoutId(TermReferer a, TermReferer b) {
+	static bool isSameWithoutId(TermOrCompoundTermOrVariableReferer a, TermOrCompoundTermOrVariableReferer b) {
 		return a.maskedOutFlags == b.maskedOutFlags;
 	}
 }
