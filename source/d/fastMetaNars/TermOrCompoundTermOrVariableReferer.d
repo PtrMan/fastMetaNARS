@@ -117,4 +117,12 @@ struct TermReferer {
 	final protected EncodingType maskOutId() pure {
 		return encoding & BITMAKSFORID;
 	}
+
+	final protected EncodingType maskedOutFlags() pure {
+		return encoding & ~BITMAKSFORID;
+	}
+
+	static bool isSameWithoutId(TermReferer a, TermReferer b) {
+		return a.maskedOutFlags == b.maskedOutFlags;
+	}
 }
