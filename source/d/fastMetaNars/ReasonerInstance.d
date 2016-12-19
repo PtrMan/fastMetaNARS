@@ -2,8 +2,8 @@ module fastMetaNars.ReasonerInstance;
 
 import fastMetaNars.Term;
 import fastMetaNars.ClassicalConcept;
-import fastMetaNars.TermReferer;
 import fastMetaNars.FlagsOfCopula;
+import fastMetaNars.TermOrCompoundTermOrVariableReferer;
 
 // TODO< pull in real bag! >
 // this is just an dummy
@@ -45,7 +45,7 @@ class ReasonerInstance {
 		return 1;
 	}
 
-	final uint getTermComplexityOfAndByTermReferer(TermReferer termReferer) {
+	final uint getTermComplexityOfAndByTermReferer(TermOrCompoundTermOrVariableReferer termReferer) {
 		if( termReferer.isVariable ) {
 			return 1;
 		}
@@ -57,7 +57,7 @@ class ReasonerInstance {
 		}
 	}
 
-	final string getDebugStringByTermReferer(TermReferer termReferer) {
+	final string getDebugStringByTermReferer(TermOrCompoundTermOrVariableReferer termReferer) {
 		return accessCompoundByIndex(cast(size_t)termReferer.getMaskedOutId).getDebugStringRecursive(this);
 	}
 }

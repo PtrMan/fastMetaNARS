@@ -6,7 +6,7 @@ import fastMetaNars.ReasonerInstance;
 import fastMetaNars.FlagsOfCopula;
 import fastMetaNars.FlagsOfCopulaConvertToString;
 import fastMetaNars.FlagsOfCopulaComplexity;
-import fastMetaNars.TermReferer;
+import fastMetaNars.TermOrCompoundTermOrVariableReferer;
 import fastMetaNars.RuleTable;
 import fastMetaNars.Term;
 
@@ -27,7 +27,7 @@ struct TemporaryDerivedCompound {
 		return result;
 	}
 
-	static TemporaryDerivedCompound* makeLeaf(TermReferer termReferer) {
+	static TemporaryDerivedCompound* makeLeaf(TermOrCompoundTermOrVariableReferer termReferer) {
 		TemporaryDerivedCompound* result = new TemporaryDerivedCompound;
 		result.protectedTermReferer = termReferer;
 		result.type = EnumType.LEAF;
@@ -98,7 +98,7 @@ struct TemporaryDerivedCompound {
 	TemporaryDerivedCompound* leftChildren; // TODO< accessor >
 	TemporaryDerivedCompound* rightChildren; // TODO< accessor >
 
-	final @property TermReferer termReferer() pure {
+	final @property TermOrCompoundTermOrVariableReferer termReferer() pure {
 		assert(type == EnumType.LEAF);
 		return protectedTermReferer;
 	}
@@ -128,7 +128,7 @@ struct TemporaryDerivedCompound {
 
 	uint termComplexity;
 
-	protected TermReferer protectedTermReferer;
+	protected TermOrCompoundTermOrVariableReferer protectedTermReferer;
 
 	protected uint protectedVariableId;
 }
@@ -139,15 +139,15 @@ TemporaryDerivedCompound* genBinary(FlagsOfCopula flagsOfCopula, TemporaryDerive
 	return TemporaryDerivedCompound.makeBinaryCompound(flagsOfCopula, left, right);
 }
 
-TemporaryDerivedCompound* genBinary(FlagsOfCopula flagsOfCopula, TemporaryDerivedCompound* left, TermReferer termRefererRight) {
+TemporaryDerivedCompound* genBinary(FlagsOfCopula flagsOfCopula, TemporaryDerivedCompound* left, TermOrCompoundTermOrVariableReferer termRefererRight) {
 	return TemporaryDerivedCompound.makeBinaryCompound(flagsOfCopula, left, TemporaryDerivedCompound.makeLeaf(termRefererRight));
 }
 
-TemporaryDerivedCompound* genBinary(FlagsOfCopula flagsOfCopula, TermReferer termRefererLeft, TemporaryDerivedCompound* right) {
+TemporaryDerivedCompound* genBinary(FlagsOfCopula flagsOfCopula, TermOrCompoundTermOrVariableReferer termRefererLeft, TemporaryDerivedCompound* right) {
 	return TemporaryDerivedCompound.makeBinaryCompound(flagsOfCopula, TemporaryDerivedCompound.makeLeaf(termRefererLeft), right);
 }
 
-TemporaryDerivedCompound* genBinary(FlagsOfCopula flagsOfCopula, TermReferer termRefererLeft, TermReferer termRefererRight) {
+TemporaryDerivedCompound* genBinary(FlagsOfCopula flagsOfCopula, TermOrCompoundTermOrVariableReferer termRefererLeft, TermOrCompoundTermOrVariableReferer termRefererRight) {
 	return TemporaryDerivedCompound.makeBinaryCompound(flagsOfCopula, TemporaryDerivedCompound.makeLeaf(termRefererLeft), TemporaryDerivedCompound.makeLeaf(termRefererRight));
 }
 
