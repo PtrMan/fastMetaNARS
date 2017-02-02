@@ -36,7 +36,17 @@ struct Compound {
 	version(DEBUG) bool cachedHashValid;
 
 	final void updateHash(ReasonerInstance reasonerInstance) {
-		assert(false, "TODO");
+		static void rotate(ref uint32_t hash, uint bits) {
+			uint32_t oldHash = hash;
+			hash = (oldHash >> bits) | (oldHash << (32 - bits));
+		}
+
+		cachedHash = 0;
+		cachedHash ^= termTupleIndex; rotate(cachedHash, 13);
+		cachedHash ^= compoundId; rotate(cachedHash, 13);
+		cachedHash ^= flagsOfCopula.asNumberEncoding; rotate(cachedHash, 13);
+
+		cachedHashValid = true;
 	}
 
 	final TermOrCompoundTermOrVariableReferer left(ReasonerInstance reasonerInstance) const {
