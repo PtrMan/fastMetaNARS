@@ -1,5 +1,7 @@
 module fastMetaNars.FlagsOfCopula;
 
+import std.stdint;
+
 struct FlagsOfCopula {
 	bool nal1or2; // --> <->
 	bool nal5; // ==> <=>
@@ -7,6 +9,11 @@ struct FlagsOfCopula {
 	bool arrowLeft, arrowRight;
 
 	bool isConjection;
+
+
+	final @property uint32_t asNumberEncoding() {
+		return nal1or2 | (nal5 << 1) | (arrowLeft << 2) | (arrowRight << 3) | (isConjection << 4);
+	}
 
 	final public this(bool nal1or2, bool nal5, bool arrowLeft, bool arrowRight, bool isConjection) {
 		this.nal1or2 = nal1or2;

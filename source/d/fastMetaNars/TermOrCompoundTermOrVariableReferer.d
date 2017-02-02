@@ -122,6 +122,10 @@ struct TermOrCompoundTermOrVariableReferer {
 		return encoding & ~BITMAKSFORID;
 	}
 
+	final @property EncodingType rawEncoding() {
+		return encoding;
+	}
+
 	static bool isSameWithoutId(TermOrCompoundTermOrVariableReferer a, TermOrCompoundTermOrVariableReferer b) {
 		return a.maskedOutFlags == b.maskedOutFlags;
 	}
