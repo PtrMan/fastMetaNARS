@@ -1,11 +1,14 @@
 module fastMetaNars.ClassicalConcept;
 
+import fastMetaNars.ClassicalTaskLink;
+import fastMetaNars.ClassicalBelief;
+import fastMetaNars.IBag;
+
 struct ClassicalConcept {
-	// TODO< translate to D and use bag >
+	IBag!(ClassicalTaskLink*, float) tasks;
+	IBag!(ClassicalBelief*, float) beliefs;
 
-	//Bag<shared_ptr<ClassicalTask>> tasks;
-	//Bag<shared_ptr<ClassicalBelief>> beliefs;
-
+	// this must all be either an term or statement
 	//UnifiedTermIndex term; // mainly for debugging purposes
 	//uint32_t termHash; // unique hash of the term
 }
