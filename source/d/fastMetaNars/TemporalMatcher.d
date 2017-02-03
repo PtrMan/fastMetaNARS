@@ -31,12 +31,12 @@ void calcFrequencyForSameTemporalSequence(CheckerType, Type)(CheckerType checker
 			continue; // equalivalence is already gurantueed by assertion-A1
 		}
 
+		// TODO< this perfect matching logic needs to be overhauled
 		perfectTemporalMatch &= checker.matchesTypeAndLength(template_[i], matched[i]);
 
-		confidenceProduct *= checker.calcConfidenceOfTemporalMatch(CheckerType.getRelativeInterval(template_[i]), Interval.makeInstantaneousRelative(accumulatedMatchedTime), accumulatedTemplateInterval);
 		accumulatedTemplateInterval = accumulatedTemplateInterval.add(CheckerType.getRelativeInterval(template_[i]));
-
 		accumulatedMatchedTime += CheckerType.getRelativeInterval(matched[i]).endRelative;
+		confidenceProduct *= checker.calcConfidenceOfTemporalMatch(Interval.makeInstantaneousRelative(accumulatedMatchedTime), accumulatedTemplateInterval);
 	}
 
 	confidenceFactor = confidenceProduct;

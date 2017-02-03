@@ -42,7 +42,7 @@ struct TemporalMatcherCheckerImpl {
 		return refererOrInterval.interval;
 	}
 
-	final float calcConfidenceOfTemporalMatch(Interval templateRefererOrIntervals, Interval matchedRefererOrIntervals, Interval accumulatedInterval) {
+	final float calcConfidenceOfTemporalMatch(Interval matchedRefererOrIntervals, Interval accumulatedInterval) {
 		assert(!accumulatedInterval.isAnchored); // accumulatedInterval must be an relative interval
 
 		if( !matchedRefererOrIntervals.isInstantaneous ) {
