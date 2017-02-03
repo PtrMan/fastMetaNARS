@@ -11,6 +11,6 @@ import fastMetaNars.ClassicalTask;
  * 
  * TaskLinks are unique according to the Task they reference
  */
-struct TaskLink {
+struct ClassicalTaskLink {
 	ClassicalTask* targetTask;
 }

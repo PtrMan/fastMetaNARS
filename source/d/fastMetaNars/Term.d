@@ -8,6 +8,7 @@ import fastMetaNars.ReasonerInstance;
 import fastMetaNars.FlagsOfCopula;
 import fastMetaNars.FlagsOfCopulaConvertToString;
 import fastMetaNars.TermOrCompoundTermOrVariableReferer;
+import fastMetaNars.Interval;
 
 struct Compound {
 	alias uint64_t CompoundIdType;
@@ -46,21 +47,25 @@ struct Compound {
 		cachedHash ^= compoundId; rotate(cachedHash, 13);
 		cachedHash ^= flagsOfCopula.asNumberEncoding; rotate(cachedHash, 13);
 
-		cachedHashValid = true;
+		version(DEBUG) {
+			cachedHashValid = true;
+		}
 	}
 
 	final TermOrCompoundTermOrVariableReferer left(ReasonerInstance reasonerInstance) const {
 		TermTuple* dereferencedCompoundTuple = reasonerInstance.accessTermTupleByIndex(termTupleIndex);
 
-		assert(dereferencedCompoundTuple.compoundIndices.length == 2, "only valid for binary compounds");
-		return dereferencedCompoundTuple.compoundIndices[0];
+		assert(dereferencedCompoundTuple.refererOrIntervals.length == 2, "only valid for binary compounds");
+		assert(dereferencedCompoundTuple.refererOrIntervals[0].isReferer);
+		return dereferencedCompoundTuple.refererOrIntervals[0].referer;
 	}
 
 	final TermOrCompoundTermOrVariableReferer right(ReasonerInstance reasonerInstance) const {
 		TermTuple* dereferencedCompoundTuple = reasonerInstance.accessTermTupleByIndex(termTupleIndex);
 
-		assert(dereferencedCompoundTuple.compoundIndices.length == 2, "only valid for binary compounds");
-		return dereferencedCompoundTuple.compoundIndices[1];
+		assert(dereferencedCompoundTuple.refererOrIntervals.length == 2, "only valid for binary compounds");
+		assert(dereferencedCompoundTuple.refererOrIntervals[1].isReferer);
+		return dereferencedCompoundTuple.refererOrIntervals[1].referer;
 	}
 
 	final string getDebugStringRecursive(ReasonerInstance reasonerInstance) {
@@ -97,5 +102,24 @@ struct Compound {
 }
 
 struct TermTuple {
-	TermOrCompoundTermOrVariableReferer[] compoundIndices; // compound-gc'ed
+	RefererOrInterval[] refererOrIntervals; // compound-gc'ed
+}
+
+// we need this indirection because a sequence can contain referers(Term or compoundterm or variable) or a interval
+struct RefererOrInterval {
+	bool isInterval;
+
+	final @property bool isReferer() {
+		return !isInterval;
+	}
+
+	TermOrCompoundTermOrVariableReferer referer;
+	Interval interval;
+
+	static RefererOrInterval makeInterval(Interval interval) {
+		RefererOrInterval result;
+		result.isInterval = true;
+		result.interval = interval;
+		return result;
+	}
 }

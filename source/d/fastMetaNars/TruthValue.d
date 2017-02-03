@@ -6,6 +6,7 @@ struct TruthValue {
 		TruthValue result;
 		result.frequency = frequency;
 		result.confidence = confidence;
+		return result;
 	}
 
 	float frequency, confidence;

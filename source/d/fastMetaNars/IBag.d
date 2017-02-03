@@ -18,10 +18,10 @@ abstract class IBag(Type, PriorityType) {
 
 	void setMaxSize(size_t size);
 
-	void put(BagEntityType element);
+	void put(BagEntity element);
 
 	// value is [0, 1]
-	BagEntityType reference(PriorityType value);
+	BagEntity reference(PriorityType value);
 
 	size_t getSize();
 }

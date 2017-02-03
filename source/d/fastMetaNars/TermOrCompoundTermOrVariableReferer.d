@@ -129,4 +129,8 @@ struct TermOrCompoundTermOrVariableReferer {
 	static bool isSameWithoutId(TermOrCompoundTermOrVariableReferer a, TermOrCompoundTermOrVariableReferer b) {
 		return a.maskedOutFlags == b.maskedOutFlags;
 	}
+
+	static bool isSameWithId(TermOrCompoundTermOrVariableReferer a, TermOrCompoundTermOrVariableReferer b) {
+		return isSameWithoutId(a, b) && a.maskOutId == b.maskOutId;
+	}
 }
