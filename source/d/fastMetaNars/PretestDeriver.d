@@ -2,15 +2,12 @@ import fastMetaNars.deriver.DeriverCaller;
 import fastMetaNars.FlagsOfCopula;
 import fastMetaNars.TermOrCompoundTermOrVariableReferer;
 import fastMetaNars.ReasonerInstance;
+import fastMetaNars.Term;
 
 void main() {
 	ReasonerInstance reasonerInstance = new ReasonerInstance;
 
-	// allocate room for tuples
-	reasonerInstance.termTuples.length = 2;
-
 	// add test compounds
-	reasonerInstance.compounds.length = 6;
 
 	reasonerInstance.humanReadableConcepts.length = 3;
 	reasonerInstance.humanReadableConcepts[0] = "a";
@@ -19,22 +16,49 @@ void main() {
 
 	reasonerInstance.configuration.maximalTermComplexity = 50;	
 
-	
+	{
+		Compound compound;
+		compound.thisTermReferer = TermOrCompoundTermOrVariableReferer.makeAtomic(0);
+		compound.compoundId = 0;
+		reasonerInstance.addCompound(compound);
+	}
 
-	reasonerInstance.compounds[0].thisTermReferer = TermOrCompoundTermOrVariableReferer.makeAtomic(0);
-	reasonerInstance.compounds[1].thisTermReferer = TermOrCompoundTermOrVariableReferer.makeAtomic(1);
-	reasonerInstance.compounds[2].thisTermReferer = TermOrCompoundTermOrVariableReferer.makeAtomic(2);
-	//reasonerInstance.compounds[3].thisTermReferer = TermOrCompoundTermOrVariableReferer.makeAtomic(3);
+	{
+		Compound compound;
+		compound.thisTermReferer = TermOrCompoundTermOrVariableReferer.makeAtomic(1);
+		compound.compoundId = 1;
+		reasonerInstance.addCompound(compound);
+	}
 
-	reasonerInstance.termTuples[0].compoundIndices = [TermOrCompoundTermOrVariableReferer.makeAtomic(0), TermOrCompoundTermOrVariableReferer.makeAtomic(2)];
-	reasonerInstance.termTuples[1].compoundIndices = [TermOrCompoundTermOrVariableReferer.makeAtomic(1), TermOrCompoundTermOrVariableReferer.makeAtomic(2)];
+	{
+		Compound compound;
+		compound.thisTermReferer = TermOrCompoundTermOrVariableReferer.makeAtomic(2);
+		compound.compoundId = 2;
+		reasonerInstance.addCompound(compound);
+	}
 
-	reasonerInstance.compounds[4].thisTermReferer = TermOrCompoundTermOrVariableReferer.makeNonatomic(4);
-	reasonerInstance.compounds[4].flagsOfCopula = FlagsOfCopula.makeInheritance();
-	reasonerInstance.compounds[4].termTupleIndex = 0;
-	reasonerInstance.compounds[5].thisTermReferer = TermOrCompoundTermOrVariableReferer.makeNonatomic(5);
-	reasonerInstance.compounds[5].flagsOfCopula = FlagsOfCopula.makeInheritance();
-	reasonerInstance.compounds[5].termTupleIndex = 0;
+	reasonerInstance.addTermTupleByReferers([TermOrCompoundTermOrVariableReferer.makeAtomic(0), TermOrCompoundTermOrVariableReferer.makeAtomic(2)]);
+	reasonerInstance.addTermTupleByReferers([TermOrCompoundTermOrVariableReferer.makeAtomic(1), TermOrCompoundTermOrVariableReferer.makeAtomic(2)]);
 
-	deriverCaller(reasonerInstance, 4, 5, false);
+	{
+		Compound compound;
+		compound.thisTermReferer = TermOrCompoundTermOrVariableReferer.makeNonatomic(3);
+		compound.flagsOfCopula = FlagsOfCopula.makeInheritance();
+		compound.termTupleIndex = 0;
+		compound.compoundId = 3;
+		
+		reasonerInstance.addCompound(compound);
+	}
+
+	{
+		Compound compound;
+		compound.thisTermReferer = TermOrCompoundTermOrVariableReferer.makeNonatomic(4);
+		compound.flagsOfCopula = FlagsOfCopula.makeInheritance();
+		compound.termTupleIndex = 0;
+		compound.compoundId = 4;
+		
+		reasonerInstance.addCompound(compound);
+	}
+
+	deriverCaller(reasonerInstance, 3, 4, false);
 }

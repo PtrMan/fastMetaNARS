@@ -13,7 +13,7 @@ abstract class IBag(Type, PriorityType) {
 
 		Type value;
 
-		protected PriorityType protectedPriority = 0;
+		protected PriorityType protectedPriority = PriorityType.init;
 	}
 
 	void setMaxSize(size_t size);

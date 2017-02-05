@@ -2,6 +2,9 @@ module fastMetaNars.Term;
 
 import std.stdint;
 import std.format;
+import std.typecons : Typedef;
+import std.algorithm.iteration : map;
+import std.array : array;
 
 import fastMetaNars.FrequencyCertainty;
 import fastMetaNars.ReasonerInstance;
@@ -10,7 +13,13 @@ import fastMetaNars.FlagsOfCopulaConvertToString;
 import fastMetaNars.TermOrCompoundTermOrVariableReferer;
 import fastMetaNars.Interval;
 
+
+
 struct Compound {
+	alias Typedef!(uint32_t, uint32_t.init, "HashWithCompoundIdType") HashWithCompoundIdType;
+	alias Typedef!(uint32_t, uint32_t.init, "HashWithoutCompoundIdType") HashWithoutCompoundIdType;
+	
+
 	alias uint64_t CompoundIdType;
 
 	static const uint COMPLEXITYINDEPENDENTVARIABLE = 1;
@@ -24,31 +33,48 @@ struct Compound {
 	TermOrCompoundTermOrVariableReferer thisTermReferer; // term referer describing this compound
 	                             // contains the id which is compound-gc'ed
 
-	// TODO 12.09.2016 < move this into term >
-	FrequencyCertainty frequencyCertainty;
-
 	// uncommented because outdated by thisTermReferer
 	//size_t compoundIndex; // compound-gc'ed index
 
 
 	uint32_t termTupleIndex;
-	uint32_t cachedHash;
 
-	version(DEBUG) bool cachedHashValid;
+	HashWithCompoundIdType cachedHashWithCompoundId;
+	version(DEBUG) bool cachedHashWithCompoundIdValid;
 
-	final void updateHash(ReasonerInstance reasonerInstance) {
+	HashWithoutCompoundIdType cachedHashWithoutCompoundId;
+	version(DEBUG) bool cachedHashWithoutCompoundIdValid;
+
+	final void updateHashes() {
+		updateHash(false);
+		updateHash(true);
+	}
+
+	final void updateHash(bool withCompoundId) {
 		static void rotate(ref uint32_t hash, uint bits) {
 			uint32_t oldHash = hash;
 			hash = (oldHash >> bits) | (oldHash << (32 - bits));
 		}
 
-		cachedHash = 0;
-		cachedHash ^= termTupleIndex; rotate(cachedHash, 13);
-		cachedHash ^= compoundId; rotate(cachedHash, 13);
-		cachedHash ^= flagsOfCopula.asNumberEncoding; rotate(cachedHash, 13);
+		uint32_t hash;
+		hash = 0;
+		hash ^= termTupleIndex; rotate(hash, 13);
+		if( withCompoundId ) {
+			hash ^= compoundId; rotate(hash, 13);
+		}
+		hash ^= flagsOfCopula.asNumberEncoding; rotate(hash, 13);
 
-		version(DEBUG) {
-			cachedHashValid = true;
+		if( withCompoundId) {
+			cachedHashWithCompoundId = cast(HashWithCompoundIdType)hash;
+			version(DEBUG) {
+				cachedHashWithCompoundIdValid = true;
+			}
+		}
+		else {
+			cachedHashWithoutCompoundId = cast(HashWithoutCompoundIdType)hash;
+			version(DEBUG) {
+				cachedHashWithoutCompoundIdValid = true;
+			}
 		}
 	}
 
@@ -99,10 +125,40 @@ struct Compound {
 	}
 
 	protected uint protectedTermComplexity;
+
+	static struct MakeParameters {
+		uint termComplexity;
+		FlagsOfCopula flagsOfCopula;
+		CompoundIdType compoundId;
+		TermOrCompoundTermOrVariableReferer thisTermReferer;
+		uint32_t termTupleIndex;
+	}
+
+	static Compound make(MakeParameters parameters) {
+		Compound result;
+		result.protectedTermComplexity = parameters.termComplexity;
+		result.flagsOfCopula = parameters.flagsOfCopula;
+		result.compoundId = parameters.compoundId;
+		result.thisTermReferer = parameters.thisTermReferer;
+		result.termTupleIndex = parameters.termTupleIndex;
+		result.updateHashes();
+		return result;
+	}
+
+	static bool isEqualWithoutCompoundIdAndTermReferer(Compound a, Compound b) {
+		return a.flagsOfCopula == b.flagsOfCopula && a.termTupleIndex == b.termTupleIndex && a.termComplexity == b.termComplexity;
+	}
+
 }
 
 struct TermTuple {
 	RefererOrInterval[] refererOrIntervals; // compound-gc'ed
+
+	static TermTuple makeByReferers(TermOrCompoundTermOrVariableReferer[] referers) {
+		TermTuple result;
+		result.refererOrIntervals = referers.map!(v => RefererOrInterval.makeReferer(v)).array;
+		return result;
+	}
 }
 
 // we need this indirection because a sequence can contain referers(Term or compoundterm or variable) or a interval
@@ -120,6 +176,13 @@ struct RefererOrInterval {
 		RefererOrInterval result;
 		result.isInterval = true;
 		result.interval = interval;
+		return result;
+	}
+
+	static RefererOrInterval makeReferer(TermOrCompoundTermOrVariableReferer referer) {
+		RefererOrInterval result;
+		result.isInterval = false;
+		result.referer = referer;
 		return result;
 	}
 }
