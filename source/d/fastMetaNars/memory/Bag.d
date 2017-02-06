@@ -1,8 +1,8 @@
-module fastMetaNars.memory.IBag;
+module fastMetaNars.memory.Bag;
 
-module fastMetaNars.entity.Item;
+import fastMetaNars.entity.Item;
 
-abstract class Bag(E : Item!K, K) {
+abstract class Bag(E, K) /*if(E : Item!K)*/ {
 	abstract void setMaxSize(size_t size);
 
 	/**
@@ -18,7 +18,7 @@ abstract class Bag(E : Item!K, K) {
         E existingItemWithSameKey = take(newKey);
         
         if( existingItemWithSameKey !is null ) {            
-            newItem = existingItemWithSameKey.merge(newItem);
+            newItem = cast(E)existingItemWithSameKey.merge(newItem);
         }
         
         // put the (new or merged) item into itemTable        
@@ -33,6 +33,7 @@ abstract class Bag(E : Item!K, K) {
         }
 	}
 
+    // returns null if item doesn't exit, is legal
 	abstract E take(K key);
 
 	// value is [0, 1]

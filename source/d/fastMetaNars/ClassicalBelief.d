@@ -1,11 +1,12 @@
 module fastMetaNars.ClassicalBelief;
 
-import fastMetaNars.TermOrCompoundTermOrVariableReferer;
+import fastMetaNars.entity.ClassicalTermLink;
+import fastMetaNars.entity.Item;
 
-struct ClassicalBelief {
-	// TODO MAYBE< 05.02.2017 : maybe we need a TermLink here, which points to the term with an path from the concept where it's occuring in that concept >
+class ClassicalBelief : Item!ClassicalTermLink {
+	// points to the term with an path from the concept where it's occuring in that concept
 	// https://github.com/opennars/opennars/blob/1.6.5_devel17_TonyAnticipationStrategy/nars_core/nars/entity/Concept.java#L91
-	TermOrCompoundTermOrVariableReferer term;
+	ClassicalTermLink termLink;
 
 	// holds all temporal related information like for example
 	// * input chaining, how long is the temporal difference to the input tasks before it
@@ -23,4 +24,8 @@ struct ClassicalBelief {
 	}
 
 	TemporalInformation temporalInformation;
+
+	override @property ClassicalTermLink name() {
+		return termLink;
+	}
 }

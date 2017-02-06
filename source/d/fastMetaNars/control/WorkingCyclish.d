@@ -1,7 +1,7 @@
 module fastMetaNars.control.WorkingCyclish;
 
 import fastMetaNars.TermOrCompoundTermOrVariableReferer;
-import fastMetaNars.IBag;
+import fastMetaNars.memory.Bag;
 import fastMetaNars.ClassicalConcept;
 
 /**
@@ -13,5 +13,5 @@ import fastMetaNars.ClassicalConcept;
  */
 class WorkingCyclish {
 	// only the term or compound term is refered (for lookup)
-	IBag!(ClassicalConcept,TermOrCompoundTermOrVariableReferer) concepts;
+	Bag!(ClassicalConcept,TermOrCompoundTermOrVariableReferer) concepts;
 }

@@ -3,6 +3,7 @@ module fastMetaNars.entity.BudgetValue;
 import std.string : format;
 
 import fastMetaNars.config.Parameters;
+import fastMetaNars.inference.BudgetFunctions;
 
 // https://github.com/opennars/opennars/blob/1.6.5_devel17_RetrospectiveAnticipation/nars_core/nars/entity/BudgetValue.java
 /**
@@ -70,7 +71,7 @@ struct BudgetValue {
      * @param that The other Budget
      */
     public void merge(BudgetValue that) {
-        BudgetFunctions.merge(*this, that);
+        BudgetFunctions.merge(this, that);
     }
     
     

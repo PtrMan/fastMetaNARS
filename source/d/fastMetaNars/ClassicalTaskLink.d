@@ -1,6 +1,7 @@
 module fastMetaNars.ClassicalTaskLink;
 
 import fastMetaNars.ClassicalTask;
+import fastMetaNars.entity.Item;
 
 // https://github.com/opennars/opennars/blob/1.6.5_devel17_TonyAnticipationStrategy/nars_core/nars/entity/TaskLink.java
 /**
@@ -11,6 +12,10 @@ import fastMetaNars.ClassicalTask;
  * 
  * TaskLinks are unique according to the Task they reference
  */
-struct ClassicalTaskLink {
-	ClassicalTask* targetTask;
+class ClassicalTaskLink : Item!ClassicalTask {
+	ClassicalTask targetTask;
+
+    override @property ClassicalTask name() {
+		return targetTask;
+	}
 }

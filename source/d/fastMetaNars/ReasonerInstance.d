@@ -10,11 +10,7 @@ import fastMetaNars.ClassicalConcept;
 import fastMetaNars.FlagsOfCopula;
 import fastMetaNars.TermOrCompoundTermOrVariableReferer;
 import fastMetaNars.CompoundHashtable;
-
-// TODO< pull in real bag! >
-// this is just an dummy
-class Bag(Type) {}
-
+import fastMetaNars.control.WorkingCyclish;
 
 struct ReasonerInstanceConfiguration {
 	float k;
@@ -41,7 +37,7 @@ class ReasonerInstance {
 	CompoundId compoundIdCounter;
 	ReasonerInstanceConfiguration configuration;
 
-	Bag!ClassicalConcept concepts;
+	WorkingCyclish workingCyclish; // holds the concepts
 
 	final this() {
 		compoundHashtableByWithId = CompoundHashtable!(Compound.HashWithCompoundIdType, true)(this);

@@ -1,15 +1,21 @@
 module fastMetaNars.ClassicalConcept;
 
+import fastMetaNars.ClassicalTask;
 import fastMetaNars.ClassicalTaskLink;
 import fastMetaNars.ClassicalBelief;
-import fastMetaNars.memory.IBag;
+import fastMetaNars.entity.ClassicalTermLink;
+import fastMetaNars.memory.Bag;
 import fastMetaNars.TermOrCompoundTermOrVariableReferer;
+import fastMetaNars.entity.Item;
 
-struct ClassicalConcept {
-	IBag!(ClassicalTaskLink*, float) tasks;
-	IBag!(ClassicalBelief*, TermOrCompoundTermOrVariableReferer) beliefs;
+class ClassicalConcept : Item!TermOrCompoundTermOrVariableReferer {
+	Bag!(ClassicalTaskLink, ClassicalTask) tasks;
+	Bag!(ClassicalBelief, ClassicalTermLink) beliefs;
 
 	// this must all be either an term or statement
-	//UnifiedTermIndex term; // mainly for debugging purposes
-	//uint32_t termHash; // unique hash of the term
+	TermOrCompoundTermOrVariableReferer term;
+
+	override @property TermOrCompoundTermOrVariableReferer name() {
+		return term;
+	}
 }

@@ -2,6 +2,8 @@ module fastMetaNars.inference.BudgetFunctions;
 
 import std.algorithm.comparison : max;
 
+import fastMetaNars.entity.BudgetValue;
+
 // https://github.com/opennars/opennars/blob/1.6.5_devel17_RetrospectiveAnticipation/nars_core/nars/inference/BudgetFunctions.java
 /**
  * Budget functions for resources allocation
