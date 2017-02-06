@@ -70,9 +70,6 @@ class ReasonerInstance {
 	}
 	
 	final Compound* accessCompoundByIndex(size_t index) {
-		import std.stdio;
-		writeln(index, " len=", compounds.length);
-
 		assert(index < compounds.length);
 		return &(compounds[index]);
 	}
