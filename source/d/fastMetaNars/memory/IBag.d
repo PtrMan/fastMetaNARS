@@ -1,27 +1,53 @@
 module fastMetaNars.memory.IBag;
 
-abstract class IBag(Type, PriorityType) {
-	static struct BagEntity {
-		final this(Type value, PriorityType priority) {
-			this.value = value;
-			this.protectedPriority = priority;
-		}
+module fastMetaNars.entity.Item;
 
-		final @property PriorityType priority() {
-			return protectedPriority;
-		}
+abstract class Bag(E : Item!K, K) {
+	abstract void setMaxSize(size_t size);
 
-		Type value;
-
-		protected PriorityType protectedPriority = PriorityType.init;
+	/**
+     * Add a new Item into the Bag
+     * if the same item already exists it gets merged
+     *
+     * \param newItem The new Item
+     * \return the item which was removed, which may be the input item if it could not be inserted; or null if nothing needed removed
+     */
+	final E putIn(E newItem) {
+		K newKey = newItem.name;
+        
+        E existingItemWithSameKey = take(newKey);
+        
+        if( existingItemWithSameKey !is null ) {            
+            newItem = existingItemWithSameKey.merge(newItem);
+        }
+        
+        // put the (new or merged) item into itemTable        
+        E overflowItem = addItem(newItem);
+        
+        
+        if( overflowItem !is null ) {
+            return overflowItem;
+        }
+        else {
+            return null;
+        }
 	}
 
-	void setMaxSize(size_t size);
-
-	void put(BagEntity element);
+	abstract E take(K key);
 
 	// value is [0, 1]
-	BagEntity reference(PriorityType value);
+	//BagEntity reference(PriorityType value);
 
-	size_t getSize();
+	// the number of items in the bag
+	abstract @property size_t size();
+
+	abstract void clear();
+
+	/**
+     * Insert an item into the bag, and return the overflow
+     *
+     * \param newItem The Item to put in
+     * \return The overflow Item, or null if nothing displaced
+     */
+    protected abstract E addItem(E newItem);
 }
