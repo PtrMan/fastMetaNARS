@@ -2,7 +2,7 @@ module fastMetaNars.ClassicalConcept;
 
 import fastMetaNars.ClassicalTaskLink;
 import fastMetaNars.ClassicalBelief;
-import fastMetaNars.IBag;
+import fastMetaNars.memory.IBag;
 import fastMetaNars.TermOrCompoundTermOrVariableReferer;
 
 struct ClassicalConcept {

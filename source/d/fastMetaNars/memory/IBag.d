@@ -1,4 +1,4 @@
-module fastMetaNars.IBag;
+module fastMetaNars.memory.IBag;
 
 abstract class IBag(Type, PriorityType) {
 	static struct BagEntity {
