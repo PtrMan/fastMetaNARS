@@ -1,6 +1,6 @@
-module fastMetaNars.ClassicalTaskLink;
+module fastMetaNars.entity.ClassicalTaskLink;
 
-import fastMetaNars.ClassicalTask;
+import fastMetaNars.entity.ClassicalTask;
 import fastMetaNars.entity.Item;
 
 // https://github.com/opennars/opennars/blob/1.6.5_devel17_TonyAnticipationStrategy/nars_core/nars/entity/TaskLink.java

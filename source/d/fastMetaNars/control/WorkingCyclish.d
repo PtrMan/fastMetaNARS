@@ -2,7 +2,7 @@ module fastMetaNars.control.WorkingCyclish;
 
 import fastMetaNars.TermOrCompoundTermOrVariableReferer;
 import fastMetaNars.memory.Bag;
-import fastMetaNars.ClassicalConcept;
+import fastMetaNars.entity.ClassicalConcept;
 
 /**
  * stores the global concepts

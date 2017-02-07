@@ -1,4 +1,4 @@
-module fastMetaNars.ClassicalSentence;
+module fastMetaNars.entity.ClassicalSentence;
 
 import fastMetaNars.TruthValue;
 import fastMetaNars.TermOrCompoundTermOrVariableReferer;

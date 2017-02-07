@@ -1,6 +1,6 @@
-module fastMetaNars.ClassicalTask;
+module fastMetaNars.entity.ClassicalTask;
 
-import fastMetaNars.ClassicalSentence;
+import fastMetaNars.entity.ClassicalSentence;
 import fastMetaNars.entity.Item;
 
 // see https://github.com/opennars/opennars/blob/1.6.5_devel17_TonyAnticipationStrategy/nars_core/nars/entity/Task.java

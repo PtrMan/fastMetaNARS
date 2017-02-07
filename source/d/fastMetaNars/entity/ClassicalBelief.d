@@ -1,4 +1,4 @@
-module fastMetaNars.ClassicalBelief;
+module fastMetaNars.entity.ClassicalBelief;
 
 import fastMetaNars.TermOrCompoundTermOrVariableReferer;
 import fastMetaNars.entity.Item;

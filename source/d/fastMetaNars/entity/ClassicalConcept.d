@@ -1,8 +1,8 @@
-module fastMetaNars.ClassicalConcept;
+module fastMetaNars.entity.ClassicalConcept;
 
-import fastMetaNars.ClassicalTask;
-import fastMetaNars.ClassicalTaskLink;
-import fastMetaNars.ClassicalBelief;
+import fastMetaNars.entity.ClassicalTask;
+import fastMetaNars.entity.ClassicalTaskLink;
+import fastMetaNars.entity.ClassicalBelief;
 //import fastMetaNars.entity.ClassicalTermLink;
 import fastMetaNars.memory.Bag;
 import fastMetaNars.TermOrCompoundTermOrVariableReferer;

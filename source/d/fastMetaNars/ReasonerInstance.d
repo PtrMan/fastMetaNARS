@@ -6,7 +6,7 @@ import std.algorithm.searching : all;
 import std.array : array;
 
 import fastMetaNars.Term;
-import fastMetaNars.ClassicalConcept;
+import fastMetaNars.entity.ClassicalConcept;
 import fastMetaNars.FlagsOfCopula;
 import fastMetaNars.TermOrCompoundTermOrVariableReferer;
 import fastMetaNars.CompoundHashtable;
