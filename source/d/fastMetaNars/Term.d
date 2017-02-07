@@ -78,6 +78,7 @@ struct Compound {
 		}
 	}
 
+	// TODO< overhaul so it returns RefererOrInterval >
 	final TermOrCompoundTermOrVariableReferer left(ReasonerInstance reasonerInstance) const {
 		TermTuple* dereferencedCompoundTuple = reasonerInstance.accessTermTupleByIndex(termTupleIndex);
 
@@ -86,6 +87,7 @@ struct Compound {
 		return dereferencedCompoundTuple.refererOrIntervals[0].referer;
 	}
 
+	// TODO< overhaul so it returns RefererOrInterval >
 	final TermOrCompoundTermOrVariableReferer right(ReasonerInstance reasonerInstance) const {
 		TermTuple* dereferencedCompoundTuple = reasonerInstance.accessTermTupleByIndex(termTupleIndex);
 
@@ -93,6 +95,19 @@ struct Compound {
 		assert(dereferencedCompoundTuple.refererOrIntervals[1].isReferer);
 		return dereferencedCompoundTuple.refererOrIntervals[1].referer;
 	}
+
+	final RefererOrInterval getComponentByIndex(ReasonerInstance reasonerInstance, size_t index) {
+		TermTuple* dereferencedCompoundTuple = reasonerInstance.accessTermTupleByIndex(termTupleIndex);
+
+		assert(index < dereferencedCompoundTuple.refererOrIntervals.length); // should maybe be "ensure"
+		return dereferencedCompoundTuple.refererOrIntervals[index];
+	}
+
+	final size_t getComponentLength(ReasonerInstance reasonerInstance) {
+		TermTuple* dereferencedCompoundTuple = reasonerInstance.accessTermTupleByIndex(termTupleIndex);
+		return dereferencedCompoundTuple.refererOrIntervals.length;
+	}
+
 
 	final string getDebugStringRecursive(ReasonerInstance reasonerInstance) {
 		if( thisTermReferer.isIndependentVariable ) {

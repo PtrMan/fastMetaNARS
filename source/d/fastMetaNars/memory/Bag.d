@@ -2,7 +2,7 @@ module fastMetaNars.memory.Bag;
 
 import fastMetaNars.entity.Item;
 
-abstract class Bag(E, K) /*if(E : Item!K)*/ {
+abstract class Bag(E, K) {
 	abstract void setMaxSize(size_t size);
 
 	/**
