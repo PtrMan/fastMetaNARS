@@ -14,12 +14,14 @@ struct FlagsOfCopula {
 	bool isConjection;
 
 	// uncommented because TOINTEGRATE
-	//bool list; 
+	//bool isList; 
 	           // # 
 	           // as introduced by pei
 	           // https://groups.google.com/forum/#!topic/open-nars/S8c6P5ndy5o
 
-
+	// uncommented because TOINTEGRATE
+	//bool isOperator;  // narsese sign is "^"
+	                    // used for the 'name' of an operator
 
 	final @property uint32_t asNumberEncoding() {
 		return nal1or2 | (nal5 << 1) | (arrowLeft << 2) | (arrowRight << 3) | (isConjection << 4);
