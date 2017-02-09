@@ -71,11 +71,6 @@ struct TemporaryDerivedCompoundType(Type) {
 		return result;
 	}
 
-
-	final @property bool isLeaf() pure {
-		return type == EnumType.LEAF;
-	}
-
 	final string debugToStringRecursivly(ReasonerInstance reasonerInstance) {
 		if( isLeaf ) {
 			return "<LEAF=%s>".format(reasonerInstance.getDebugStringByTermReferer(termReferer));
@@ -112,6 +107,29 @@ struct TemporaryDerivedCompoundType(Type) {
 		}
 	}
 
+	final TemporaryDerivedCompoundType!Type* getCompoundByIndex(size_t index) {
+		// TODO< ensure type is COMPOUND for debug build >
+		// TODO< ensure index is in range for debug build >
+
+		// TODO< rewrite code to access array >
+		if( index == 0 ) {
+			return leftChildren;
+		}
+		else if( index == 1 ) {
+			return rightChildren;
+		}
+		else {
+			throw new Exception("invalid index");
+		}
+	}
+
+	final size_t getCompoundLength() {
+		// TODO< ensure type is COMPOUND for debug build >
+
+		// TODO< rewrite code to access array >
+		return 2;
+	}
+
 	EnumType type;
 	FlagsOfCopula flagsOfCopula; // TODO< accessor >
 	TemporaryDerivedCompoundType!Type* leftChildren; // TODO< accessor >
@@ -142,6 +160,14 @@ struct TemporaryDerivedCompoundType(Type) {
 
 	final @property bool isVariable() pure {
 		return isIndependentVariable || isDependentVariable;
+	}
+
+	final @property bool isLeaf() pure {
+		return type == EnumType.LEAF;
+	}
+
+	final @property bool isCompound() pure {
+		return type == EnumType.COMPOUND;
 	}
 
 
@@ -191,4 +217,15 @@ TemporaryDerivedTerm* genTerm(TemporaryDerivedCompound* derivedCompound, RuleTab
 	result.derivedCompound = derivedCompound;
 	result.truthfunction = truthfunction;
 	return result;
+}
+
+import std.typecons : Nullable;
+import fastMetaNars.TruthValue;
+
+// used to carry the derivation result which holds aleady the compound and the truth function and truthvalue
+// TODO< move this to own file/other file >
+struct TemporaryDerivedCompoundWithDecorationAndTruth {
+	TemporaryDerivedCompoundWithDecoration *derivedCompoundWithDecoration;
+	RuleTable.EnumTruthFunction truthfunction;
+	Nullable!TruthValue truth; // cached calculated truth
 }

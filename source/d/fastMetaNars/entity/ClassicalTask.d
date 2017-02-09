@@ -5,6 +5,14 @@ import fastMetaNars.entity.Item;
 
 // see https://github.com/opennars/opennars/blob/1.6.5_devel17_TonyAnticipationStrategy/nars_core/nars/entity/Task.java
 class ClassicalTask : Item!(ClassicalSentence) {
+	static ClassicalTask makeFromSentence(ClassicalSentence sentence) {
+		return new ClassicalTask(sentence);
+	}
+
+	final this(ClassicalSentence sentence) {
+		this.sentence = sentence;
+	}
+
 	ClassicalSentence sentence;
 
 	ClassicalTask parentTask; // must behave like weakptr, else we violate AIKR

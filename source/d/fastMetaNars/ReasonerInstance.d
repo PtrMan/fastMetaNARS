@@ -10,7 +10,8 @@ import fastMetaNars.entity.ClassicalConcept;
 import fastMetaNars.FlagsOfCopula;
 import fastMetaNars.TermOrCompoundTermOrVariableReferer;
 import fastMetaNars.CompoundHashtable;
-import fastMetaNars.control.WorkingCyclish;
+import fastMetaNars.entity.builder.BagBuilder;
+import fastMetaNars.memory.Memory;
 
 struct ReasonerInstanceConfiguration {
 	float k;
@@ -37,11 +38,17 @@ class ReasonerInstance {
 	CompoundId compoundIdCounter;
 	ReasonerInstanceConfiguration configuration;
 
-	WorkingCyclish workingCyclish; // holds the concepts
+	BagBuilder bagBuilder;
+
+	Memory memory;
 
 	final this() {
 		compoundHashtableByWithId = CompoundHashtable!(Compound.HashWithCompoundIdType, true)(this);
 		compoundHashtableByWithoutId = CompoundHashtable!(Compound.HashWithoutCompoundIdType, false)(this);
+
+		bagBuilder = new BagBuilder;
+
+		memory = new Memory();
 	}
 
 	// returns index

@@ -11,6 +11,14 @@ import fastMetaNars.TermOrCompoundTermOrVariableReferer;
  * It is used as the premises and conclusions of all inference rules.
  */
 struct ClassicalSentence {
+	static ClassicalSentence makeJudgement(TermOrCompoundTermOrVariableReferer term, TruthValue truth) {
+		ClassicalSentence result;
+		result.term = term;
+		result.truth = truth;
+		result.punctation = EnumPunctation.JUDGEMENT;
+		return result;
+	}
+
 	TermOrCompoundTermOrVariableReferer term; // the content of a sentence is a term
 
 	EnumPunctation punctation;
@@ -27,6 +35,8 @@ struct ClassicalSentence {
 		GOAL,
 		QUEST,
 	}
+
+	// TODO TODO TODO< overload comparision whic does roughtly the same as in openNARS >
 
 
 	final @property isJudgement() {

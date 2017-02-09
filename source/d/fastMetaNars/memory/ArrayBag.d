@@ -1,11 +1,14 @@
 module fastMetaNars.memory.ArrayBag;
 
+import std.stdint;
+
 import std.algorithm.mutation : remove;
+import std.algorithm.sorting : sort;
 
 import fastMetaNars.memory.Bag;
 
 // slow but (hopefully) correct implementation of a bag
-struct ArrayBag!(E, K) : Bag!(E, K) {
+class ArrayBag(E, K) : Bag!(E, K) {
 	final void setPriorityQuantisation(float priorityQuantisation) {
 		this.priorityQuantisation = priorityQuantisation;
 	}
@@ -42,14 +45,14 @@ struct ArrayBag!(E, K) : Bag!(E, K) {
      * \param newItem The Item to put in
      * \return The overflow Item, or null if nothing displaced
      */
-    final E addItem(E element);
-		unsigned quantisizedPriorityInt = quantisizePriority(element.budget.priority);
+    final E addItem(E element) {
+		uint64_t quantisizedPriorityInt = quantisizePriority(element.budget.priority);
 		prioritySumQuantisized += quantisizedPriorityInt;
 
 		elements ~= element;
 
 		if (elements.length > maxSize) {
-			std::sort(elements.begin(), elements.end(), std::less);
+			elements.sort(); // TODO 09.02.2017< do we sort in the right order here? >
 			E overflowElement = elements[maxSize];
 			elements.length = maxSize;
 			return overflowElement;
@@ -71,7 +74,7 @@ struct ArrayBag!(E, K) : Bag!(E, K) {
 	}
 	
 	protected final uint64_t quantisizePriority(float priority) {
-		return cast(unsigned)(priority / priorityQuantisation);
+		return cast(uint)(priority / priorityQuantisation);
 	}
 
 	protected float priorityQuantisation = cast(float)(0.001);
@@ -99,7 +102,7 @@ struct ArrayBag!(E, K) : Bag!(E, K) {
 	}
 	*/
 
-	protected BagEntity[] elements;
+	protected E[] elements;
 
 	protected uint64_t prioritySumQuantisized = 0;
 

@@ -4,6 +4,10 @@ import fastMetaNars.TermOrCompoundTermOrVariableReferer;
 import fastMetaNars.entity.Item;
 
 class ClassicalBelief : Item!TermOrCompoundTermOrVariableReferer  {
+	final this(TermOrCompoundTermOrVariableReferer term) {
+		this.term = term;
+	}
+
 	// term with an path from the concept where it's occuring in that concept
 	// https://github.com/opennars/opennars/blob/1.6.5_devel17_TonyAnticipationStrategy/nars_core/nars/entity/Concept.java#L91
 	TermOrCompoundTermOrVariableReferer term;

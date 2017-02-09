@@ -2,6 +2,7 @@ module fastMetaNars.memory.Bag;
 
 import fastMetaNars.entity.Item;
 
+// E must provide the method or UFCS function ".name()" to get the name/key
 abstract class Bag(E, K) {
 	abstract void setMaxSize(size_t size);
 
