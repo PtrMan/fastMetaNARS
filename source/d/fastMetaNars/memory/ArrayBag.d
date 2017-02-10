@@ -1,6 +1,8 @@
 module fastMetaNars.memory.ArrayBag;
 
 import std.stdint;
+import std.random : uniform;
+import std.exception : enforce;
 
 import std.algorithm.mutation : remove;
 import std.algorithm.sorting : sort;
@@ -23,6 +25,13 @@ class ArrayBag(E, K) : Bag!(E, K) {
 		}
 
 		return null;
+	}
+
+	final E reference() {
+		enforce(elements.length > 0, "reference() called on empty ArrayBag");
+
+		size_t index = uniform(0, elements.length);
+		return elements[index];
 	}
 
 	// value is [0, 1]

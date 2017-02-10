@@ -34,6 +34,11 @@ abstract class Bag(E, K) {
         }
 	}
 
+    // returns an element without taking it out
+    // should be only used with pointers
+    // is not allowed to be called on an empty bag
+    abstract E reference();
+
     // returns null if item doesn't exit, is legal
 	abstract E take(K key);
 
