@@ -1,4 +1,4 @@
-module codegen.GenerateRules;
+module fastMetaNars.codegen.GenerateRules;
 
 import std.typecons : Nullable, Tuple;
 
@@ -14,7 +14,7 @@ string getString(const Token!EnumOperationType token) {
 	return token.contentString;
 }
 
-import fastMetaNars.memory.ArrayStack;
+import misced.memory.ArrayStack;
 
 enum EnumOperationType {
 	BRACEOPEN,
@@ -450,6 +450,8 @@ struct RuleDescriptor {
 		return premiseElements[1];
 	}
 
+	bool rulePreconditionIsQuestion;
+
 
 	RuleResultWithPostconditionAndTruth[] ruleResultWithPostconditionAndTruth;
 
@@ -458,6 +460,22 @@ struct RuleDescriptor {
 
 import std.stdio;
 
+// helper function which checks for a certain name
+private bool existsName(Element[] elements, string label) {
+	foreach( iElement; elements ) {
+		if( !iElement.isTokenWithDecoration ) {
+			continue;
+		}
+
+		if( elements[1].tokenWithDecoration.token.contentString == label ) {
+			return true;
+		}
+	}
+	
+	return false;
+}
+
+import std.exception : enforce;
 
 private RuleDescriptor translateParserRuleToRuleDescriptor(Parser.Rule parserRule) {
 	assert(parserRule.elementsBeforeHalfH.length == 2, "The count of premises must be two!");
@@ -490,6 +508,8 @@ private RuleDescriptor translateParserRuleToRuleDescriptor(Parser.Rule parserRul
 	static RuleResultWithPostconditionAndTruth innerFnConvertElementsOfResultWithPostconditionAndTruthToDescriptor(Element[] elements) {
 		assert(elements.length == 3);
 
+		writeln(elements[1].tokenWithDecoration.token.contentString);
+
 		if( elements[1].tokenWithDecoration.token.contentString != ":post" ) {
 			throw new Exception(":post expected at [1]!");
 		}
@@ -505,13 +525,46 @@ private RuleDescriptor translateParserRuleToRuleDescriptor(Parser.Rule parserRul
 
 	innerFnFindCommonCompoundTerms();
 
+	import std.stdio;
 
-	assert((parserRule.elementsAfterHalfH[0].braceContent.length % 3) == 0, "Number of Elements after half-h must be devisible by 3, because structure is <postCompound :post postConditions>");
+	Element preElement;
 
-	for( size_t childElementIndex = 0; childElementIndex < parserRule.elementsAfterHalfH[0].braceContent.length; childElementIndex += 3) {
-		resultRuleDescriptor.ruleResultWithPostconditionAndTruth ~= innerFnConvertElementsOfResultWithPostconditionAndTruthToDescriptor(parserRule.elementsAfterHalfH[0].braceContent[childElementIndex..childElementIndex+3]);
+	// find ":pre" and store the preElement
+	foreach( i; 0..parserRule.elementsAfterHalfH.length-1 ) {
+		if( !parserRule.elementsAfterHalfH[i].isTokenWithDecoration ) {
+			continue;
+		}
+
+		if( parserRule.elementsAfterHalfH[i].tokenWithDecoration.token.contentString == ":pre" ) {
+			preElement = parserRule.elementsAfterHalfH[i+1];
+			break;
+		}
 	}
 
+	if( parserRule.elementsAfterHalfH.existsName(":post") ) { // handling of one post expression, not inside an brace
+		// we assume that post is at index 1
+		resultRuleDescriptor.ruleResultWithPostconditionAndTruth ~= innerFnConvertElementsOfResultWithPostconditionAndTruthToDescriptor(parserRule.elementsAfterHalfH[0..0+3]);
+	}
+	else { // handling of multiple post expressions, inside an brace
+		assert((parserRule.elementsAfterHalfH[0].braceContent.length % 3) == 0, "Number of Elements after half-h must be devisible by 3, because structure is <postCompound :post postConditions>");
+
+		for( size_t childElementIndex = 0; childElementIndex < parserRule.elementsAfterHalfH[0].braceContent.length; childElementIndex += 3) {
+			resultRuleDescriptor.ruleResultWithPostconditionAndTruth ~= innerFnConvertElementsOfResultWithPostconditionAndTruthToDescriptor(parserRule.elementsAfterHalfH[0].braceContent[childElementIndex..childElementIndex+3]);
+		}
+
+	}
+
+	if( preElement !is null ) {
+		enforce(preElement.isBrace);
+
+		foreach( iPreElement; preElement.braceContent ) {
+			if( iPreElement.isTokenWithDecoration ) {
+				if( iPreElement.tokenWithDecoration.token.contentString == ":question?" ) {
+					resultRuleDescriptor.rulePreconditionIsQuestion = true;
+				}
+			}
+		}
+	}
 
 
 	resultRuleDescriptor.premiseElements = parserRule.elementsBeforeHalfH[0..2];
@@ -519,79 +572,15 @@ private RuleDescriptor translateParserRuleToRuleDescriptor(Parser.Rule parserRul
 	return resultRuleDescriptor;
 }
 
-/+ uncommented 08.09.2016 because it needs an overhaul to account for the new clojure like parsing
-
-private RuleDescriptor[] translateParserRulesToRuleDescriptors(Parser.Rule[] parserRules) {
-	
-	RuleDescriptor[] translatedRules;
-
-	foreach( iterationParserRule; parserRules ) {
-		writeln(iterationParserRule.attributeDictionary.keys);
-
-		writeln(iterationParserRule.elementsBefore.length, " ", iterationParserRule.elementsAfter.length);
-
-		string cppTruthFunctionEnum = translateTruthFunctionToCppEnum(getTruthFunction(iterationParserRule.attributeDictionary[":post"]));
-
-		EnumSource sourceLeft = findSource(iterationParserRule, iterationParserRule.elementsAfter[0].leftIdentifier);
-		EnumSource sourceRight = findSource(iterationParserRule, iterationParserRule.elementsAfter[0].rightIdentifier);
-
-		FlagsOfCopula flagsOfSourceCopula[2];
-		flagsOfSourceCopula[0] = translateOperationToCopola(iterationParserRule.elementsBefore[0].operation);
-		flagsOfSourceCopula[1] = translateOperationToCopola(iterationParserRule.elementsBefore[1].operation);
-		FlagsOfCopula flagsOfTargetCopula = translateOperationToCopola(iterationParserRule.elementsAfter[0].operation);
-
-		RuleDescriptor ruleDescriptorToAdd = RuleDescriptor(sourceLeft, sourceRight, flagsOfSourceCopula, flagsOfTargetCopula, cppTruthFunctionEnum);
-
-		// translate precondition
-		if( ":pre" in iterationParserRule.attributeDictionary ) {
-			Parser.DictionaryElement preDictionaryElement = iterationParserRule.attributeDictionary[":pre"];
-
-			foreach( iterationDictContent; preDictionaryElement.content ) {
-				if( iterationDictContent.convertsTo!(Parser.Element) && iterationDictContent.get!(Parser.Element).braceContent.length != 0 ) {
-					Token!EnumOperationType firstToken = iterationDictContent.get!(Parser.Element).braceContent[0].tokenWithDecoration;
-
-					bool isFirstTokenKey = iterationDictContent.get!(Parser.Element).braceContent[0].tokenWithDecoration.token.type == Token!EnumOperationType.EnumType.OPERATION && firstToken.contentOperation == EnumOperationType.KEY;
-					bool isFirstTokenUnequal = firstToken.contentString == ":!=";
-					if( isFirstTokenKey && isFirstTokenUnequal ) {
-
-						assert(iterationDictContent.get!(Parser.Element).braceContent.length == 3);
-						assert(iterationDictContent.get!(Parser.Element).braceContent[1].tokenWithDecoration.token.type == Token!EnumOperationType.EnumType.IDENTIFIER);
-						assert(iterationDictContent.get!(Parser.Element).braceContent[2].tokenWithDecoration.token.type == Token!EnumOperationType.EnumType.IDENTIFIER);
-
-						string preConditionUnequalVariablennames[2];
-						preConditionUnequalVariablennames[0] = iterationDictContent.get!(Parser.Element).braceContent[1].tokenWithDecoration.token.contentString;
-						preConditionUnequalVariablennames[1] = iterationDictContent.get!(Parser.Element).braceContent[2].tokenWithDecoration.token.contentString;
-
-						EnumSource[2] sources;
-						sources[0] = findSource(iterationParserRule, preConditionUnequalVariablennames[0]);
-						sources[1] = findSource(iterationParserRule, preConditionUnequalVariablennames[1]);
-						ruleDescriptorToAdd.preconditionUnequal = sources;
-
-						break;
-					}
-				}
-			}
-		}
-
-		translatedRules ~= ruleDescriptorToAdd;
-	}
-
-	return translatedRules;
-
-
-
-}
-+/
-
-
-
+import std.algorithm.searching : find;
+import std.string : split, join;
+import std.algorithm.iteration : map;
+import std.array : array;
 
 void main() {
 	//
 
 	string nal = """
-		;;Equivalence and Implication Rules
-          ;Similarity to Inheritance
           #R[(S --> P) (S <-> P) |- (S --> P) :post (:t/struct-int :p/belief) :pre (:question?)]
           ;Inheritance to Similarity
           #R[(S <-> P) (S --> P) |- (S <-> P) :post (:t/struct-abd :p/belief) :pre (:question?)]
@@ -659,7 +648,7 @@ lexer.setSource(
 	""");
 	//*/
 	
-	//*
+	/* commented 11.02.2017 
 	lexer.setSource(
 	"""
 	 #R[(S --> M) (P --> M) |- (((P --> $X) ==> (S --> $X)) :post (:t/abduction)
@@ -669,6 +658,23 @@ lexer.setSource(
                                           :pre (:belief? (:!= S P))]
 	""");
 	//*/
+
+
+	string nal2 = """
+	      #R[(S --> P) (S <-> P) |- (S --> P) :post (:t/struct-int :p/belief) :pre (:question?)]
+          ;Inheritance to Similarity
+          #R[(S <-> P) (S --> P) |- (S <-> P) :post (:t/struct-abd :p/belief) :pre (:question?)]
+
+
+	""";
+
+	string[] splitedLines = nal2.split("\n");
+	string[] unquotedSplitedLines = splitedLines.map!(v => v[0..v.length-v.find(";").length]).array;
+	string cleanedNal = unquotedSplitedLines.join("\n");
+
+	writeln(cleanedNal);
+
+	lexer.setSource(cleanedNal);
 
 
 	parser.setLexer(lexer);
@@ -692,9 +698,9 @@ lexer.setSource(
 	parser.rules[0].rootElement.debugIt(0);
 
 
-	RuleDescriptor ruleDescriptor = translateParserRuleToRuleDescriptor(parser.rules[0]);
+	RuleDescriptor[] ruleDescriptors = parser.rules.map!(v => translateParserRuleToRuleDescriptor(v)).array;
 
-	string generatedCode = generateDCodeForDeriver(ruleDescriptor);
+	string generatedCode = generateDCodeForDeriver(ruleDescriptors);
 
 	{
 		import std.File;
@@ -750,9 +756,9 @@ class CodegenStringTemplates {
 	string templateCheckEntry, templateCheckLeave;
 }
 
-string generateDCodeForDeriver(RuleDescriptor ruleDescriptor) {
+string generateDCodeForDeriver(RuleDescriptor[] ruleDescriptors) {
 	static string signatureOpen() {
-		return "TemporaryDerivedTerm*[] derive(ReasonerInstance reasonerInstance, UnifiedTermIndex premiseLeftIndex, UnifiedTermIndex premiseRightIndex) {";
+		return "TemporaryDerivedTerm*[] derive(ReasonerInstance reasonerInstance, UnifiedTermIndex premiseLeftIndex, UnifiedTermIndex premiseRightIndex, bool isQuestion) {";
 	}
 
 	static string signatureClose() {
@@ -860,12 +866,14 @@ string generateDCodeForDeriver(RuleDescriptor ruleDescriptor) {
 
 			Compound* premiseLeft = reasonerInstance.accessCompoundByIndex(premiseLeftIndex);
 			Compound* premiseRight = reasonerInstance.accessCompoundByIndex(premiseRightIndex);
+
+			if(false) {}
 	""";
 
 	stringTemplates.templateLeave = """return resultTerms;""";
 
 	stringTemplates.templateCheckEntry = """
-		if( 
+		else if( 
 			// AUTOGEN< check flags for match >
 			((premiseLeft.flagsOfCopula == %s) && (premiseRight.flagsOfCopula == %s))
 
@@ -881,7 +889,7 @@ string generateDCodeForDeriver(RuleDescriptor ruleDescriptor) {
 	stringTemplates.templateCheckLeave = "}\n";
 
 
-	return generateCodeForDeriver(delegates, stringTemplates, ruleDescriptor);
+	return generateCodeForDeriver(delegates, stringTemplates, ruleDescriptors);
 }
 
 
@@ -946,7 +954,7 @@ Element getPrefixCopulaElement(Compound compound) {
 
 import std.format : format;
 
-string generateCodeForDeriver(CodegenDelegates delegates, CodegenStringTemplates stringTemplates, RuleDescriptor ruleDescriptor) {
+string generateCodeForDeriver(CodegenDelegates delegates, CodegenStringTemplates stringTemplates, RuleDescriptor[] ruleDescriptors) {
 	string generated;
 
 	generated ~= stringTemplates.templatePreamble;
@@ -978,175 +986,183 @@ string generateCodeForDeriver(CodegenDelegates delegates, CodegenStringTemplates
 		}
 	}
 
-	EnumSource getSourceOfPremiseVariableByName(string premiseVariableName) {
-		bool doesPremiseVariableApearInLeafElementRecursivly(Element element) {
-			return element.tokenWithDecoration.token.contentString == premiseVariableName;
-		}
+	foreach( iRuleDescriptor; ruleDescriptors ) {
 
-		bool doesPremiseVariableApearInCompoundRecursivly(Compound compound) {
-			if( compound.isBrace ) {
+		EnumSource getSourceOfPremiseVariableByName(string premiseVariableName) {
+			bool doesPremiseVariableApearInLeafElementRecursivly(Element element) {
+				return element.tokenWithDecoration.token.contentString == premiseVariableName;
+			}
+
+			bool doesPremiseVariableApearInCompoundRecursivly(Compound compound) {
+				if( compound.isBrace ) {
+					assert(compound.isBinaryCompound); // just binary compounds are for now implemented
+
+					return doesPremiseVariableApearInCompoundRecursivly(compound.leftChild) || doesPremiseVariableApearInCompoundRecursivly(compound.rightChild);
+				}
+				else if( compound.isTokenWithDecoration ) {
+					return doesPremiseVariableApearInLeafElementRecursivly(compound);
+				}
+				else {
+					throw new Exception("Internal error"); // may be because its not implemented
+				}
+			}
+
+			// an enum to inform getSourceOfPremiseVariableByNameForCompound() about on which side it "looks"
+			enum EnumPremiseSide {
+				LEFT,
+				RIGHT,
+			}
+
+			EnumSource getSourceOfPremiseVariableByNameForCompound(Compound compound, EnumPremiseSide premiseSide) {
+				assert(doesPremiseVariableApearInCompoundRecursivly(compound));
+
 				assert(compound.isBinaryCompound); // just binary compounds are for now implemented
 
-				return doesPremiseVariableApearInCompoundRecursivly(compound.leftChild) || doesPremiseVariableApearInCompoundRecursivly(compound.rightChild);
-			}
-			else if( compound.isTokenWithDecoration ) {
-				return doesPremiseVariableApearInLeafElementRecursivly(compound);
-			}
-			else {
-				throw new Exception("Internal error"); // may be because its not implemented
-			}
-		}
+				assert(!compound.leftChild.tokenWithDecoration.isVariable);
+				assert(!compound.rightChild.tokenWithDecoration.isVariable);
 
-		// an enum to inform getSourceOfPremiseVariableByNameForCompound() about on which side it "looks"
-		enum EnumPremiseSide {
-			LEFT,
-			RIGHT,
-		}
-
-		EnumSource getSourceOfPremiseVariableByNameForCompound(Compound compound, EnumPremiseSide premiseSide) {
-			assert(doesPremiseVariableApearInCompoundRecursivly(compound));
-
-			assert(compound.isBinaryCompound); // just binary compounds are for now implemented
-
-			assert(!compound.leftChild.tokenWithDecoration.isVariable);
-			assert(!compound.rightChild.tokenWithDecoration.isVariable);
-
-			if( compound.leftChild.tokenWithDecoration.token.contentString == premiseVariableName ) {
-				final switch(premiseSide) with(EnumPremiseSide) {
-					case LEFT: return EnumSource.ALEFT;
-					case RIGHT: return EnumSource.ARIGHT;
+				if( compound.leftChild.tokenWithDecoration.token.contentString == premiseVariableName ) {
+					final switch(premiseSide) with(EnumPremiseSide) {
+						case LEFT: return EnumSource.ALEFT;
+						case RIGHT: return EnumSource.ARIGHT;
+					}
+				}
+				else if( compound.rightChild.tokenWithDecoration.token.contentString == premiseVariableName ) {
+					final switch(premiseSide) with(EnumPremiseSide) {
+						case LEFT: return EnumSource.BLEFT;
+						case RIGHT: return EnumSource.BRIGHT;
+					}
+				}
+				else {
+					throw new Exception("Internal error, premiseVariable wasn't found, but its guranteed to be found, should never happen!");
 				}
 			}
-			else if( compound.rightChild.tokenWithDecoration.token.contentString == premiseVariableName ) {
-				final switch(premiseSide) with(EnumPremiseSide) {
-					case LEFT: return EnumSource.BLEFT;
-					case RIGHT: return EnumSource.BRIGHT;
+
+			if( doesPremiseVariableApearInCompoundRecursivly(iRuleDescriptor.premiseElements[0]) ) {
+				return getSourceOfPremiseVariableByNameForCompound(iRuleDescriptor.premiseElements[0], EnumPremiseSide.LEFT);
+			}
+			else if( doesPremiseVariableApearInCompoundRecursivly(iRuleDescriptor.premiseElements[1]) ) {
+				return getSourceOfPremiseVariableByNameForCompound(iRuleDescriptor.premiseElements[1], EnumPremiseSide.RIGHT);
+			}
+			else {
+				throw new Exception("premiseVariableName \"" ~ premiseVariableName ~ "\" wasn't found in left or right premisses!");
+			}
+		}
+
+		// returns the to generated code for the token
+		// used in the recursive codgen code for the creation of the temporary objects describing the creation of the compounds/terms
+		string nestedFnGetCodeOfToken(TokenWithDecoration tokenWithDecoration) {
+			Token!EnumOperationType token = tokenWithDecoration.token;
+
+			if( tokenWithDecoration.isIndependentVariable ) {
+				return delegates.variableCreation(EnumVariableType.INDEPENDENT, lookupVariable(EnumVariableType.INDEPENDENT, token.contentString));
+			}
+			else if( tokenWithDecoration.isDependentVariable ) {
+				return delegates.variableCreation(EnumVariableType.DEPENDENT, lookupVariable(EnumVariableType.DEPENDENT, token.contentString));
+			}
+			else {
+				EnumSource sourceOfPremiseVariable = getSourceOfPremiseVariableByName(token.contentString);
+				return delegates.getPremiseVariableForSource(sourceOfPremiseVariable);
+			}
+		}
+
+
+		string delegate(Element element) nestedFnGetCodeOfCompoundCreationRecursivly;
+
+		string nestedFnGetCodeOfBinaryCompoundCreationRecursivly(EnumCopulaForm copulaForm, Element copulaElement, Element leftSideElement, Element rightSideElement) {
+			string copulaAsString = delegates.convertFlagsOfCopulaToCtor(convertCopulaElementToFlagsOfCopula(copulaElement));
+
+			string leftSideAsString, rightSideAsString;
+
+			// check if it are compounds and recursivly call nestedFnGetStringOfCompundCreationRecursivly if its the case
+			// else we check if it is an premise variable, if it is the case we generate the code for accessing it
+
+			if( leftSideElement.isTokenWithDecoration ) {
+				leftSideAsString = nestedFnGetCodeOfToken(leftSideElement.tokenWithDecoration);
+			}
+			else if( leftSideElement.isBrace ) {
+				leftSideAsString = nestedFnGetCodeOfCompoundCreationRecursivly(leftSideElement);
+			}
+			else {
+				throw new Exception("Internal Error");
+			}
+
+			if( rightSideElement.isTokenWithDecoration ) {
+				rightSideAsString = nestedFnGetCodeOfToken(rightSideElement.tokenWithDecoration);
+			}
+			else if( rightSideElement.isBrace ) {
+				rightSideAsString = nestedFnGetCodeOfCompoundCreationRecursivly(rightSideElement);
+			}
+			else {
+				throw new Exception("Internal Error");
+			}
+
+			return delegates.temporaryCompoundCreation(copulaForm, copulaAsString, [leftSideAsString, rightSideAsString]);
+		}
+
+		// returns the string for the codegen.
+		// The generated code builds an TemporaryUnifiedTerm with the structure in the target, the terms which apear in the premise get referenced by the coresponding variables.
+		nestedFnGetCodeOfCompoundCreationRecursivly = (Element element){
+			EnumCopulaForm nestedFnGetCopulaForm() {
+				if( element.braceContent[0].isCopula ) {
+					return EnumCopulaForm.PREFIX;
+				}
+				else if( element.braceContent[1].isCopula ) {
+					return EnumCopulaForm.NONPRFIX;
+				}
+				else {
+					throw new Exception("Internal Error - unknown compound form");
+				}
+			}
+
+			if( element.braceContent.length == 3 ) {
+				final switch(nestedFnGetCopulaForm()) with(EnumCopulaForm) {
+					case NONPRFIX: return nestedFnGetCodeOfBinaryCompoundCreationRecursivly(nestedFnGetCopulaForm(), element.braceContent[1], element.braceContent[0], element.braceContent[2]);
+					case PREFIX: return nestedFnGetCodeOfBinaryCompoundCreationRecursivly(nestedFnGetCopulaForm(), element.braceContent[0], element.braceContent[1], element.braceContent[2]);
 				}
 			}
 			else {
-				throw new Exception("Internal error, premiseVariable wasn't found, but its guranteed to be found, should never happen!");
+				throw new Exception("Nonbinary compounds are not implemented!");
 			}
+		};
+
+		string nestedFnGetStringOfTermForResult(RuleResultWithPostconditionAndTruth rule) {
+			string createdCompoundCode = nestedFnGetCodeOfCompoundCreationRecursivly(rule.resultTransformationElement);
+
+			// TODO< put the string into the templates >
+			return "genTerm(%s, %s)".format(createdCompoundCode, delegates.truthFunctionCode(rule.postcondition.truthfunction));
 		}
 
-		if( doesPremiseVariableApearInCompoundRecursivly(ruleDescriptor.premiseElements[0]) ) {
-			return getSourceOfPremiseVariableByNameForCompound(ruleDescriptor.premiseElements[0], EnumPremiseSide.LEFT);
-		}
-		else if( doesPremiseVariableApearInCompoundRecursivly(ruleDescriptor.premiseElements[1]) ) {
-			return getSourceOfPremiseVariableByNameForCompound(ruleDescriptor.premiseElements[1], EnumPremiseSide.RIGHT);
-		}
-		else {
-			throw new Exception("premiseVariableName \"" ~ premiseVariableName ~ "\" wasn't found in left or right premisses!");
-		}
-	}
 
-	// returns the to generated code for the token
-	// used in the recursive codgen code for the creation of the temporary objects describing the creation of the compounds/terms
-	string nestedFnGetCodeOfToken(TokenWithDecoration tokenWithDecoration) {
-		Token!EnumOperationType token = tokenWithDecoration.token;
-
-		if( tokenWithDecoration.isIndependentVariable ) {
-			return delegates.variableCreation(EnumVariableType.INDEPENDENT, lookupVariable(EnumVariableType.INDEPENDENT, token.contentString));
-		}
-		else if( tokenWithDecoration.isDependentVariable ) {
-			return delegates.variableCreation(EnumVariableType.DEPENDENT, lookupVariable(EnumVariableType.DEPENDENT, token.contentString));
-		}
-		else {
-			EnumSource sourceOfPremiseVariable = getSourceOfPremiseVariableByName(token.contentString);
-			return delegates.getPremiseVariableForSource(sourceOfPremiseVariable);
-		}
-	}
-
-
-	string delegate(Element element) nestedFnGetCodeOfCompoundCreationRecursivly;
-
-	string nestedFnGetCodeOfBinaryCompoundCreationRecursivly(EnumCopulaForm copulaForm, Element copulaElement, Element leftSideElement, Element rightSideElement) {
-		string copulaAsString = delegates.convertFlagsOfCopulaToCtor(convertCopulaElementToFlagsOfCopula(copulaElement));
-
-		string leftSideAsString, rightSideAsString;
-
-		// check if it are compounds and recursivly call nestedFnGetStringOfCompundCreationRecursivly if its the case
-		// else we check if it is an premise variable, if it is the case we generate the code for accessing it
-
-		if( leftSideElement.isTokenWithDecoration ) {
-			leftSideAsString = nestedFnGetCodeOfToken(leftSideElement.tokenWithDecoration);
-		}
-		else if( leftSideElement.isBrace ) {
-			leftSideAsString = nestedFnGetCodeOfCompoundCreationRecursivly(leftSideElement);
-		}
-		else {
-			throw new Exception("Internal Error");
-		}
-
-		if( rightSideElement.isTokenWithDecoration ) {
-			rightSideAsString = nestedFnGetCodeOfToken(rightSideElement.tokenWithDecoration);
-		}
-		else if( rightSideElement.isBrace ) {
-			rightSideAsString = nestedFnGetCodeOfCompoundCreationRecursivly(rightSideElement);
-		}
-		else {
-			throw new Exception("Internal Error");
-		}
-
-		return delegates.temporaryCompoundCreation(copulaForm, copulaAsString, [leftSideAsString, rightSideAsString]);
-	}
-
-	// returns the string for the codegen.
-	// The generated code builds an TemporaryUnifiedTerm with the structure in the target, the terms which apear in the premise get referenced by the coresponding variables.
-	nestedFnGetCodeOfCompoundCreationRecursivly = (Element element){
-		EnumCopulaForm nestedFnGetCopulaForm() {
-			if( element.braceContent[0].isCopula ) {
-				return EnumCopulaForm.PREFIX;
-			}
-			else if( element.braceContent[1].isCopula ) {
-				return EnumCopulaForm.NONPRFIX;
-			}
-			else {
-				throw new Exception("Internal Error - unknown compound form");
-			}
-		}
-
-		if( element.braceContent.length == 3 ) {
-			final switch(nestedFnGetCopulaForm()) with(EnumCopulaForm) {
-				case NONPRFIX: return nestedFnGetCodeOfBinaryCompoundCreationRecursivly(nestedFnGetCopulaForm(), element.braceContent[1], element.braceContent[0], element.braceContent[2]);
-				case PREFIX: return nestedFnGetCodeOfBinaryCompoundCreationRecursivly(nestedFnGetCopulaForm(), element.braceContent[0], element.braceContent[1], element.braceContent[2]);
-			}
-		}
-		else {
-			throw new Exception("Nonbinary compounds are not implemented!");
-		}
-	};
-
-	string nestedFnGetStringOfTermForResult(RuleResultWithPostconditionAndTruth rule) {
-		string createdCompoundCode = nestedFnGetCodeOfCompoundCreationRecursivly(rule.resultTransformationElement);
-
-		// TODO< put the string into the templates >
-		return "genTerm(%s, %s)".format(createdCompoundCode, delegates.truthFunctionCode(rule.postcondition.truthfunction));
-	}
-
-	// generate code for the check of the premises
-	{
-		string nestedCodeForUnequalCheck = "&& true /* TODO TODO TODO */";
-
-		// we do walk because later on we have to match deeper terms
-		Element leftPremiseCompoundCopulaElement = ruleDescriptor.leftPremiseElement.walk([]).getNonprefixCopulaElement;
-		Element rightPremiseCompoundCopulaElement = ruleDescriptor.rightPremiseElement.walk([]).getNonprefixCopulaElement;
-		
-		generated ~= stringTemplates.templateCheckEntry.format( 
-			delegates.convertFlagsOfCopulaToCtor(convertCopulaElementToFlagsOfCopula(leftPremiseCompoundCopulaElement)), //convertFlagsOfCopulaToCtor(ruleDescriptor.flagsOfSourceCopula[0]),
-			delegates.convertFlagsOfCopulaToCtor(convertCopulaElementToFlagsOfCopula(rightPremiseCompoundCopulaElement)), //convertFlagsOfCopulaToCtor(ruleDescriptor.flagsOfSourceCopula[1]),
-			delegates.codeForPremisePatternMatching(ruleDescriptor.toMatchPremiseTerms),
-			nestedCodeForUnequalCheck
-		);
-	}
-
-
-	foreach( iterationRuleResultWithPostconditionAndTruth; ruleDescriptor.ruleResultWithPostconditionAndTruth ) {
-		// TODO< put the string into the templates >
-		generated ~= "resultTerms ~= %s".format(nestedFnGetStringOfTermForResult(iterationRuleResultWithPostconditionAndTruth)) ~ ";\n";
-	}
-
-	generated ~= stringTemplates.templateCheckLeave;
 	
+		// generate code for the check of the premises
+		{
+			string nestedCodeForUnequalCheck = "&& true /* TODO TODO TODO */";
+			string nestedCodeForQuestionCheck = iRuleDescriptor.rulePreconditionIsQuestion ? "&& isQuestion" : "";
+
+			string nestedCodeForPreconditions = nestedCodeForQuestionCheck ~ nestedCodeForUnequalCheck;
+
+			// we do walk because later on we have to match deeper terms
+			Element leftPremiseCompoundCopulaElement = iRuleDescriptor.leftPremiseElement.walk([]).getNonprefixCopulaElement;
+			Element rightPremiseCompoundCopulaElement = iRuleDescriptor.rightPremiseElement.walk([]).getNonprefixCopulaElement;
+			
+			generated ~= stringTemplates.templateCheckEntry.format( 
+				delegates.convertFlagsOfCopulaToCtor(convertCopulaElementToFlagsOfCopula(leftPremiseCompoundCopulaElement)), //convertFlagsOfCopulaToCtor(iRuleDescriptor.flagsOfSourceCopula[0]),
+				delegates.convertFlagsOfCopulaToCtor(convertCopulaElementToFlagsOfCopula(rightPremiseCompoundCopulaElement)), //convertFlagsOfCopulaToCtor(iRuleDescriptor.flagsOfSourceCopula[1]),
+				delegates.codeForPremisePatternMatching(iRuleDescriptor.toMatchPremiseTerms),
+				nestedCodeForPreconditions
+			);
+		}
+
+
+		foreach( iterationRuleResultWithPostconditionAndTruth; iRuleDescriptor.ruleResultWithPostconditionAndTruth ) {
+			// TODO< put the string into the templates >
+			generated ~= "resultTerms ~= %s".format(nestedFnGetStringOfTermForResult(iterationRuleResultWithPostconditionAndTruth)) ~ ";\n";
+		}
+
+		generated ~= stringTemplates.templateCheckLeave;
+	}
+
 
 	// TODO< rewrite as string templates >
 	generated ~= ";\n"; // finish the else from the last templateCheckLeave
