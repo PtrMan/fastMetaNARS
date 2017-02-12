@@ -450,7 +450,8 @@ struct RuleDescriptor {
 		return premiseElements[1];
 	}
 
-	bool rulePreconditionIsQuestion;
+	bool preconditionIsQuestion;
+	Nullable!(Tuple!(EnumSource, EnumSource)) preconditionUnequality;
 
 
 	RuleResultWithPostconditionAndTruth[] ruleResultWithPostconditionAndTruth;
@@ -487,15 +488,30 @@ private RuleDescriptor translateParserRuleToRuleDescriptor(Parser.Rule parserRul
 		assert(false, "TODO");
 	}
 
+	Tuple!(string, EnumSource)[] matching;
+	matching ~= Tuple!(string, EnumSource)(parserRule.elementsBeforeHalfH[0].leftIdentifier, EnumSource.ALEFT);
+	matching ~= Tuple!(string, EnumSource)(parserRule.elementsBeforeHalfH[0].rightIdentifier, EnumSource.ARIGHT);
+	matching ~= Tuple!(string, EnumSource)(parserRule.elementsBeforeHalfH[1].leftIdentifier, EnumSource.BLEFT);
+	matching ~= Tuple!(string, EnumSource)(parserRule.elementsBeforeHalfH[1].rightIdentifier, EnumSource.BRIGHT);
+
+	EnumSource innerFnGetSourceAdressByName(string name) {
+		foreach( iMatching; matching ) {
+			if( iMatching[0] == name ) {
+				return iMatching[1];
+			}
+		}
+
+		throw new Exception("Couldn't find name " ~ name);
+	}
+
 	void innerFnFindCommonCompoundTerms() {
-		Tuple!(string, EnumSource)[] leftMatching;
-		leftMatching ~= Tuple!(string, EnumSource)(parserRule.elementsBeforeHalfH[0].leftIdentifier, EnumSource.ALEFT);
-		leftMatching ~= Tuple!(string, EnumSource)(parserRule.elementsBeforeHalfH[0].rightIdentifier, EnumSource.ARIGHT);
+		Tuple!(string, EnumSource)[] leftMatching = matching[0..2];
+		Tuple!(string, EnumSource)[] rightMatching = matching[2..4];
 
-		Tuple!(string, EnumSource)[] rightMatching;
-		rightMatching ~= Tuple!(string, EnumSource)(parserRule.elementsBeforeHalfH[1].leftIdentifier, EnumSource.BLEFT);
-		rightMatching ~= Tuple!(string, EnumSource)(parserRule.elementsBeforeHalfH[1].rightIdentifier, EnumSource.BRIGHT);
+		assert(leftMatching.length == 2);
+		assert(rightMatching.length == 2);
 
+		
 		foreach( iterationLeftMatching; leftMatching ) {
 			foreach( iterationRightMatching; rightMatching ) {
 				if( iterationLeftMatching[0] == iterationRightMatching[0] ) {
@@ -560,8 +576,19 @@ private RuleDescriptor translateParserRuleToRuleDescriptor(Parser.Rule parserRul
 		foreach( iPreElement; preElement.braceContent ) {
 			if( iPreElement.isTokenWithDecoration ) {
 				if( iPreElement.tokenWithDecoration.token.contentString == ":question?" ) {
-					resultRuleDescriptor.rulePreconditionIsQuestion = true;
+					resultRuleDescriptor.preconditionIsQuestion = true;
 				}
+			}
+			else if( iPreElement.isBrace ) {
+				Element conditionBrace = iPreElement;
+
+				enforce(conditionBrace.braceContent.length == 3, "must have 3 elements");
+				enforce(conditionBrace.braceContent[0].isTokenWithDecoration && conditionBrace.braceContent[0].tokenWithDecoration.token.contentString == ":!=", "precondition must be !=");
+
+				string comparisionNames[2];
+				comparisionNames[0] = conditionBrace.braceContent[1].tokenWithDecoration.token.contentString;
+				comparisionNames[1] = conditionBrace.braceContent[2].tokenWithDecoration.token.contentString;
+				resultRuleDescriptor.preconditionUnequality = Tuple!(EnumSource, EnumSource)(innerFnGetSourceAdressByName(comparisionNames[0]), innerFnGetSourceAdressByName(comparisionNames[1]));
 			}
 		}
 	}
@@ -756,6 +783,9 @@ class CodegenDelegates {
 
 	// has to generate the code for the matching of the premise of the derivation
 	string function(Tuple!(EnumSource, EnumSource)[] toMatchPremiseTerms, bool twistSides) codeForPremisePatternMatching;
+
+	string function(EnumSource a, EnumSource b, bool checkForEqual, bool twistSides) codeForPrecondition;
+
 }
 
 class CodegenStringTemplates {
@@ -843,6 +873,11 @@ string generateDCodeForDeriver(RuleDescriptor[] ruleDescriptors) {
 		return nestedCodeForSourcePattern;
 	}
 
+	// twistSides : are the premise sides (left and right) switched?
+	static string codeForPrecondition(EnumSource a, EnumSource b, bool checkForEqual, bool twistSides) {
+		return format("&& (%s %s %s)", getPremiseVariableForSource(twistSource(a, twistSides)), checkForEqual ? "==" : "!=", getPremiseVariableForSource(twistSource(b, twistSides)));
+	}
+
 
 	
 
@@ -855,6 +890,9 @@ string generateDCodeForDeriver(RuleDescriptor[] ruleDescriptors) {
 	delegates.variableCreation = &variableCreation;
 	delegates.temporaryCompoundCreation = &temporaryCompoundCreation;
 	delegates.codeForPremisePatternMatching = &codeForPremisePatternMatching;
+	delegates.codeForPrecondition = &codeForPrecondition;
+
+
 
 	CodegenStringTemplates stringTemplates = new CodegenStringTemplates;
 	stringTemplates.templatePreamble = """
@@ -1179,10 +1217,10 @@ string generateCodeForDeriver(CodegenDelegates delegates, CodegenStringTemplates
 		
 			// generate code for the check of the premises
 			{
-				string nestedCodeForUnequalCheck = "&& true /* TODO TODO TODO */";
-				string nestedCodeForQuestionCheck = iRuleDescriptor.rulePreconditionIsQuestion ? "&& isQuestion" : "";
+				string nestedCodeForPreconditionCheck = !iRuleDescriptor.preconditionUnequality.isNull ? delegates.codeForPrecondition(iRuleDescriptor.preconditionUnequality[0], iRuleDescriptor.preconditionUnequality[1], false/*checkForEqual*/, twisted) : "";
+				string nestedCodeForQuestionCheck = iRuleDescriptor.preconditionIsQuestion ? "&& isQuestion" : "";
 
-				string nestedCodeForPreconditions = nestedCodeForQuestionCheck ~ nestedCodeForUnequalCheck;
+				string nestedCodeForPreconditions = nestedCodeForQuestionCheck ~ nestedCodeForPreconditionCheck;
 
 				// we do walk because later on we have to match deeper terms
 				Element leftPremiseCompoundCopulaElement = iRuleDescriptor.leftPremiseElement.walk([]).getNonprefixCopulaElement;
