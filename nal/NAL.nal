@@ -1,0 +1,158 @@
+; see https://github.com/opennars/opennars2/blob/2.0.0_postdev1/src/nal/rules.clj
+
+
+; nal1-nal2-nal3-equivalence-and-implication
+
+          ;;Equivalence and Implication Rules
+          ;Similarity to Inheritance
+          #R[(S --> P) (S <-> P) |- (S --> P) :post (:t/struct-int :p/belief) :pre (:question?)]
+          ;Inheritance to Similarity
+          #R[(S <-> P) (S --> P) |- (S <-> P) :post (:t/struct-abd :p/belief) :pre (:question?)]
+
+;   TODO< set definitions >
+
+
+; nal1-nal5-conversion-contraposition-negation
+
+          ;; Conversion
+          ; If S can stand for P P can to a certain low degree also represent the class S
+          ; If after S usually P happens then it might be a good guess that usually before P happens S happens.
+          #R[(P --> S) (S --> P) |- (P --> S) :post (:t/conversion :p/belief) :pre (:question?)]
+
+;   TODO< remaining rules >
+
+
+
+; nal1-nal2-inheritance-related-syllogisms
+
+          ;;Inheritance-Related Syllogisms
+          ; If A is a special case of B and B is a special case of C so is A a special case of C (strong) the other variations are hypotheses (weak)
+          #R[(A --> B) (B --> C) |- (A --> C) :post (:t/deduction :d/strong :allow-backward) :pre ((:!= A C))]
+          #R[(A --> B) (A --> C) |- (C --> B) :post (:t/abduction :d/weak :allow-backward) :pre ((:!= B C))]
+          #R[(A --> C) (B --> C) |- (B --> A) :post (:t/induction :d/weak :allow-backward) :pre ((:!= A B))]
+          #R[(A --> B) (B --> C) |- (C --> A) :post (:t/exemplification :d/weak :allow-backward) :pre ((:!= C A))]
+
+          ; similarity from inheritance
+          ; If S is a special case of P and P is a special case of S then S and P are similar
+          #R[(S --> P) (P --> S) |- (S <-> P) :post (:t/intersection :d/strong :allow-backward)]
+
+          ; inheritance from similarty <- TODO check why this one was missing
+          #R[(S <-> P) (P --> S) |- (S --> P) :post (:t/reduce-conjunction :d/strong :allow-backward)]
+
+          ; similarity-based syllogism
+          ; If P and S are a special case of M then they might be similar (weak)
+          ; also if P and S are a general case of M
+          #R[(P --> M) (S --> M) |- (S <-> P) :post (:t/comparison :d/weak :allow-backward) :pre ((:!= S P))]
+          #R[(M --> P) (M --> S) |- (S <-> P) :post (:t/comparison :d/weak :allow-backward) :pre ((:!= S P))]
+
+          ; If M is a special case of P and S and M are similar then S is also a special case of P (strong)
+          #R[(M --> P) (S <-> M) |- (S --> P) :post (:t/analogy :d/strong :allow-backward) :pre ((:!= S P))]
+          #R[(P --> M) (S <-> M) |- (P --> S) :post (:t/analogy :d/strong :allow-backward) :pre ((:!= S P))]
+          #R[(M <-> P) (S <-> M) |- (S <-> P) :post (:t/resemblance :d/strong :allow-backward) :pre ((:!= S P))]
+
+
+; nal3-intersection-union-difference
+
+;  TODO< remaining rules >
+
+
+
+; nal3-inheritance-based-decomposition
+
+;  TODO< remaining rules >
+
+
+
+; nal3-set-related-rules
+
+;  TODO< remaining rules >
+
+
+
+; nal3-structural-inference
+
+;  TODO< remaining rules >
+
+
+
+; nal4-structural-inference
+
+;  TODO< remaining rules >
+
+
+
+; nal5-implication-based-syllogisms
+
+;  TODO< remaining rules >
+
+
+
+; nal5-implication-based-composition
+
+;  TODO< remaining rules >
+
+
+
+; nal5-nal8-implication-based-decomposition
+
+;  TODO< remaining rules >
+
+
+
+
+; nal5-multi-conditional-syllogism
+
+;  TODO< remaining rules >
+
+
+
+
+
+; nal6-variable-introduction
+
+;  TODO< remaining rules >
+
+
+
+
+; nal6-variable-syllogisms
+
+;  TODO< remaining rules >
+
+
+
+
+; nal6-multiple-variable-introduction
+
+;  TODO< remaining rules >
+
+
+
+
+; nal6-variable-elimination
+
+;  TODO< remaining rules >
+
+
+
+; nal6-second-layer-variable-handling
+
+;  TODO< remaining rules >
+
+
+
+; nal7-temporal-inference
+
+;  TODO< remaining rules >
+
+
+
+; backward-only-inference
+
+;  TODO< remaining rules >
+
+
+
+; backward-driven-forward-inference
+
+;  TODO< remaining rules >

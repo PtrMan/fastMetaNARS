@@ -603,113 +603,21 @@ import std.algorithm.searching : find;
 import std.string : split, join;
 import std.algorithm.iteration : map;
 import std.array : array;
+import std.file : readText;
 
 void main() {
-	//
+	string nalFilePath = "nal/NAL.nal";
+	string nal = readText(nalFilePath);
 
-	string nal = """
-          #R[(S --> P) (S <-> P) |- (S --> P) :post (:t/struct-int :p/belief) :pre (:question?)]
-          ;Inheritance to Similarity
-          #R[(S <-> P) (S --> P) |- (S <-> P) :post (:t/struct-abd :p/belief) :pre (:question?)]
-
-
-          #R[(P --> S) (S --> P) |- (P --> S) :post (:t/conversion :p/belief) :pre (:question?)]
-
-
-          ;;Inheritance-Related Syllogisms
-         ; If A is a special case of B and B is a special case of C so is A a special case of C (strong) the other variations are hypotheses (weak)
-         #R[(A --> B) (B --> C) |- (A --> C) :pre ((:!= A C)) :post (:t/deduction :d/strong :allow-backward)]
-         #R[(A --> B) (A --> C) |- (C --> B) :pre ((:!= B C)) :post (:t/abduction :d/weak :allow-backward)]
-         #R[(A --> C) (B --> C) |- (B --> A) :pre ((:!= A B)) :post (:t/induction :d/weak :allow-backward)]
-         #R[(A --> B) (B --> C) |- (C --> A) :pre ((:!= C A)) :post (:t/exemplification :d/weak :allow-backward)]
-
-         ; similarity from inheritance
-         ; If S is a special case of P and P is a special case of S then S and P are similar
-         #R[(S --> P) (P --> S) |- (S <-> P) :post (:t/intersection :d/strong :allow-backward)]
-
-         ; inheritance from similarty <- TODO check why this one was missing
-         #R[(S <-> P) (P --> S) |- (S --> P) :post (:t/reduce-conjunction :d/strong :allow-backward)]
-
-         ; similarity-based syllogism
-         ; If P and S are a special case of M then they might be similar (weak)
-         ; also if P and S are a general case of M
-         #R[(P --> M) (S --> M) |- (S <-> P) :post (:t/comparison :d/weak :allow-backward) :pre ((:!= S P))]
-         #R[(M --> P) (M --> S) |- (S <-> P) :post (:t/comparison :d/weak :allow-backward) :pre ((:!= S P))]
-
-         ; If M is a special case of P and S and M are similar then S is also a special case of P (strong)
-         #R[(M --> P) (S <-> M) |- (S --> P) :pre ((:!= S P)) :post (:t/analogy :d/strong :allow-backward)]
-         #R[(P --> M) (S <-> M) |- (P --> S) :pre ((:!= S P)) :post (:t/analogy :d/strong :allow-backward)]
-         #R[(M <-> P) (S <-> M) |- (S <-> P) :pre ((:!= S P)) :post (:t/resemblance :d/strong :allow-backward)]
-	""";
 
 	RuleLexer lexer = new RuleLexer();
 	Parser parser = new Parser();
 
-	// testing area
-	/*
-	{
-	lexer.setSource(
-	"""
-	""");
-	}
-	//*/
-
-
-
-
-	//lexer.setSource("""
-//#R[(A --> B) (B --> C) |- (A --> C) :pre ((:!= A C)) :post (:t/deduction :d/strong :allow-backward)]""");
-
-	/* uncommented 06.09.2016, worked, just want to experiment with variables below
-lexer.setSource(
-"""
-#R[(M --> P) (M --> S) |- (S <-> P) :post (:t/comparison :d/weak :allow-backward) :pre ((:!= S P))]
-#R[(M --> P) (S <-> M) |- (S --> P) :pre ((:!= S P)) :post (:t/analogy :d/strong :allow-backward)]""");
-	//*/
-
-	/*
-	lexer.setSource(
-	"""
-	 #R[(S --> M) (P --> M) |- ((P --> $X) ==> (S --> $X)) :post (:t/abduction)
-                               ]
-	""");
-	//*/
-	
-	/* commented 11.02.2017 
-	lexer.setSource(
-	"""
-	 #R[(S --> M) (P --> M) |- (((P --> $X) ==> (S --> $X)) :post (:t/abduction)
-                                      ((S --> $X) ==> (P --> $X)) :post (:t/induction)
-                                      ((P --> $X) <=> (S --> $X)) :post (:t/comparison)
-                                      (&& (S --> #Y) (P --> #Y)) :post (:t/intersection))
-                                          :pre (:belief? (:!= S P))]
-	""");
-	//*/
-
-
-	string nal2 = """
-	      #R[(S --> P) (S <-> P) |- (S --> P) :post (:t/struct-int :p/belief) :pre (:question?)]
-          ;Inheritance to Similarity
-          #R[(S <-> P) (S --> P) |- (S <-> P) :post (:t/struct-abd :p/belief) :pre (:question?)]
-
-
-
-          #R[(P --> S) (S --> P) |- (P --> S) :post (:t/conversion :p/belief) :pre (:question?)]
-
-
-          ;;Inheritance-Related Syllogisms
-         ; If A is a special case of B and B is a special case of C so is A a special case of C (strong) the other variations are hypotheses (weak)
-         #R[(A --> B) (B --> C) |- (A --> C) :post (:t/deduction :d/strong :allow-backward) :pre ((:!= A C)) ]
-         #R[(A --> B) (A --> C) |- (C --> B) :post (:t/abduction :d/weak :allow-backward) :pre ((:!= B C))]
-         #R[(A --> C) (B --> C) |- (B --> A) :post (:t/induction :d/weak :allow-backward) :pre ((:!= A B))]
-         #R[(A --> B) (B --> C) |- (C --> A) :post (:t/exemplification :d/weak :allow-backward) :pre ((:!= C A))]
-	""";
-
-	string[] splitedLines = nal2.split("\n");
+	string[] splitedLines = nal.split("\n");
 	string[] unquotedSplitedLines = splitedLines.map!(v => v[0..v.length-v.find(";").length]).array;
 	string cleanedNal = unquotedSplitedLines.join("\n");
 
-	writeln(cleanedNal);
+	//writeln(cleanedNal);
 
 	lexer.setSource(cleanedNal);
 
@@ -732,7 +640,7 @@ lexer.setSource(
 		iterationRule.cache();
 	}
 
-	parser.rules[0].rootElement.debugIt(0);
+	//parser.rules[0].rootElement.debugIt(0);
 
 
 	RuleDescriptor[] ruleDescriptors = parser.rules.map!(v => translateParserRuleToRuleDescriptor(v)).array;
@@ -740,16 +648,12 @@ lexer.setSource(
 	string generatedCode = generateDCodeForDeriver(ruleDescriptors);
 
 	{
-		import std.File;
-		File file = File("fastMetaNars/autogenerated/Deriver.d", "w");
+		File file = File("source/d/fastMetaNars/autogenerated/Deriver.d", "w");
 		file.write(generatedCode);
 		file.close();
 	}
 
 	writeln("generation was successfull!");
-
-	//RuleDescriptor[] ruleDescriptors = translateParserRulesToRuleDescriptors(parser.rules);
-	//writeln(generateCodeCppForDeriver(ruleDescriptors));
 }
 
 
@@ -1263,96 +1167,3 @@ string generateCodeForDeriver(CodegenDelegates delegates, CodegenStringTemplates
 
 	return generated;
 }
-
-/+ uncommented 09.09.2016 because overhaul and a language independent interface(now for D) is needed
-string generateCodeCppForDeriver(RuleDescriptor[] ruleDescriptors) {
-	// the signature of the generate function is
-	const string signature = "vector<UnifiedTerm> derive(ReasonerInstance &reasonerInstance, vector<UnifiedTermIndex> &leftPathTermIndices, vector<UnifiedTermIndex> &rightPathTermIndices, float k)";
-
-
-	string generateCodeForRuleDescriptor(RuleDescriptor ruleDescriptor) {
-
-		
-
-
-		string templateRuletableGeneralizedBinary = """
-				Ruletable::GeneralizedBinaryRule rule;
-				rule.sourceLeft = Ruletable::%s;
-				rule.sourceRight = Ruletable::%s;
-				rule.termFlags = static_cast<decltype(rule.termFlags)>(%s);
-				rule.truthFunction = Ruletable::EnumTruthFunction::%s;
-
-				UnifiedTerm resultTerm = Ruletable::ruletableGeneralizedBinary(previousLeft, previousRight, k, rule);
-				resultTerms.push_back(resultTerm);
-		""";
-
-
-		string emittedCode;
-
-		import std.format : format;
-
-		string nestedCodeForUnequalCheck;
-		// if there is a unequal precondition we have to generate code for it which will be emitted
-		if( !ruleDescriptor.preconditionUnequal.isNull ) {
-			
-			string unequalTestLeftVariableCode = getVariableForSource(ruleDescriptor.preconditionUnequal.get()[0]) ~ ".value";
-			string unequalTestRightVariableCode = getVariableForSource(ruleDescriptor.preconditionUnequal.get()[1]) ~ ".value";
-
-			nestedCodeForUnequalCheck = format("&& (%s != %s)", unequalTestLeftVariableCode, unequalTestRightVariableCode);
-		}
-
-
-		string getNestedCodeForSourcePattern() {
-			string nestedCodeForSourcePattern = "true";
-			foreach( iterationToMatchInputTerm; ruleDescriptor.toMatchPremiseTerms ) {
-				nestedCodeForSourcePattern ~= format("&& (%s == %s)", getVariableForSource(iterationToMatchInputTerm[0]) ~ ".value", getVariableForSource(iterationToMatchInputTerm[1]) ~ ".value");
-			}
-
-			return nestedCodeForSourcePattern;
-		}
-
-
-		emittedCode ~= format(templateCheckEntry, 
-			convertFlagsOfCopulaToCtor(ruleDescriptor.flagsOfSourceCopula[0]),
-			convertFlagsOfCopulaToCtor(ruleDescriptor.flagsOfSourceCopula[1]),
-			getNestedCodeForSourcePattern(),
-			nestedCodeForUnequalCheck
-		);
-
-
-
-
-		// TODO< implement case where the generalized binary can't be used >
-		emittedCode ~= format(templateRuletableGeneralizedBinary,
-			convertSourceToCpp(ruleDescriptor.sourceLeft),
-			convertSourceToCpp(ruleDescriptor.sourceRight),
-			convertFlagsOfCopulaToCtor(ruleDescriptor.flagsOfTargetCopula),
-			ruleDescriptor.rule
-		);
-
-		emittedCode ~= templateCheckLeave;
-
-		
-
-		return emittedCode;
-	}
-
-
-	string generated;
-
-	generated ~= signature ~ " {\n";
-	generated ~= templateEntry;
-
-	foreach( iterationRuleDescriptor; ruleDescriptors) {
-		generated ~= generateCodeForRuleDescriptor(iterationRuleDescriptor);
-	}
-
-	generated ~= ";\n"; // finish the else from the last templateCheckLeave
-
-
-	generated ~= templateLeave;
-	generated ~= "}\n";
-
-	return generated;
-}
-+/
