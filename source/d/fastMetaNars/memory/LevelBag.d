@@ -1,6 +1,10 @@
 module fastMetaNars.memory.LevelBag;
 
+import std.math : abs;
+
+import fastMetaNars.config.Parameters;
 import fastMetaNars.memory.Bag;
+import fastMetaNars.memory.Distributor;
 
 // translated from https://github.com/opennars/opennars/blob/1.6.5_devel17_RetrospectiveAnticipation/nars_core/nars/storage/LevelBag.java
 /**
@@ -11,10 +15,7 @@ class LevelBag(E, K) : Bag!(E, K) {
     uint levels; /** priority levels */
     int fireCompleteLevelThreshold; /** firing threshold */
 
-    /**
-     * shared DISTRIBUTOR that produce the probability distribution
-     */
-    short[] DISTRIBUTOR;
+    short[] DISTRIBUTOR; /** shared DISTRIBUTOR that produce the probability distribution */
 
     /**
      * mapping from key to item
@@ -22,10 +23,8 @@ class LevelBag(E, K) : Bag!(E, K) {
     //public final Set<E> nameTable;
     E[K] nameTable;
 
-    /**
-     * array of lists of items, for items on different level
-     */
-    Level!E[] level;
+
+    Level!E[] level; /** array of lists of items, for items on different level */
 
     uint capacity; /** defined in different bags */
     private float mass; /** current sum of occupied level */
@@ -40,12 +39,12 @@ class LevelBag(E, K) : Bag!(E, K) {
     }
 
     /** thresholdLevel = 0 disables "fire level completely" threshold effect */
-    public LevelBag(uint levels, uint capacity, int thresholdLevel) {
+    final this(uint levels, uint capacity, int thresholdLevel) {
         this.levels = levels;
         this.fireCompleteLevelThreshold = thresholdLevel;
         //THRESHOLD = levels + 1; //fair/flat takeOut policy
         this.capacity = capacity;
-        nameTable = new HashMap<>(capacity);
+        ///nameTable = new HashMap<>(capacity); // uncommented from java because the D inbuilt assoc array doesn't have a capacity ctor (?)
         level.length = this.levels;
         levelEmpty.length = this.levels;
         Arrays.fill(levelEmpty, true);
@@ -54,15 +53,17 @@ class LevelBag(E, K) : Bag!(E, K) {
         clear();
     }
 
-    static class Level!E  {
+    static class Level(E) {
         private int thisLevel;
         
         //Deque<E> items;
-        LinkedHashSet<E> items;
-                
+        //LinkedHashSet<E> items;
+        bool[E] items; // hashset hack
+
+
         final this(int level, int numElements) {
             super();
-            items = new LinkedHashSet(numElements);
+            ///items = new LinkedHashSet(numElements);  uncommented from java because standard assoc array doesn't support presizing
             this.thisLevel = level;
         }
 
@@ -74,11 +75,11 @@ class LevelBag(E, K) : Bag!(E, K) {
         */
         
         final @property uint size() {
-            return items.size();
+            return items.length;
         }
         
         
-        final void levelIsEmpty(final boolean e) {
+        final void levelIsEmpty(bool e) {
             levelEmpty[thisLevel] = e;
         }
         
@@ -90,36 +91,44 @@ class LevelBag(E, K) : Bag!(E, K) {
        final boolean add(E e) {
            if (e is null)
                throw new Exception("Bag requires non-null items");
-           
-            if (items.add(e)) {
-                levelIsEmpty(false);
-                return true;
+            
+            if( e in items ) {
+                return false;
             }
-            return false;
+
+            items[e] = true;
+            levelIsEmpty(false);
+            return true;
         }
 
         final bool remove(E o) {
-            if (items.remove(o)) {
+            if( e in items ) {
+                items.remove(e);
                 levelIsEmpty(items.isEmpty());
                 return true;
             }
             return false;
         }
 
+        
         final E removeFirst() {
-            E e = items.iterator().next();
-            items.remove(e);
-            if (e!=null) {
+            K firstKey = items.keys[0]; 
+            E e = items[firstKey]; // TODO D < null semantics if it wasn't found ? >
+            items.remove(firstKey);
+
+            if( e !is null ) {
                 levelIsEmpty(items.isEmpty());
             }
             return e;
         }
 
+        /* java iterator functionality 
+
         final E peekFirst() {
             return items.iterator().next();
         }
 
-        /* java iterator functionality 
+        
         final Iterator<E> descendingIterator() {
             return items.iterator();
             //return items.descendingIterator();
@@ -151,7 +160,7 @@ class LevelBag(E, K) : Bag!(E, K) {
      */
     final override @property size_t size() {
         int in_ = nameTable.length;
-        if (Parameters.DEBUG_BAG && (Parameters.DEBUG)) {
+        if (Parameters.DEBUG_BAG && Parameters.DEBUG) {
             int is_ = sizeItems();
             if (abs(is_-in_) > 1 ) {                
                 throw new Exception(/*this.getClass() + */" inconsistent index: items="); // TODO< translate java code  + is_ + " names=" + in_ + ", capacity=" + getCapacity());
@@ -235,6 +244,7 @@ class LevelBag(E, K) : Bag!(E, K) {
     }
     +/
     
+    /+ not jet implemented functionality
     final E peekNextWithoutAffectingBagOrder() {    
         if (size() == 0) return null; // empty bag                
         if (levelEmpty[currentLevel] || (currentCounter == 0)) { // done with the current level
@@ -242,6 +252,7 @@ class LevelBag(E, K) : Bag!(E, K) {
         }
         return level[currentLevel].peekFirst();        
     }
+    +/
     
     /+ not jet implemented functionality
     @Override
@@ -269,7 +280,8 @@ class LevelBag(E, K) : Bag!(E, K) {
     }
 
     final override E take(K name) {
-        E oldItem = nameTable.remove(name);
+        E oldItem = nameTable[name];
+        nameTable.remove(name);
         if (oldItem is null) {
             return null;
         }
@@ -293,10 +305,10 @@ class LevelBag(E, K) : Bag!(E, K) {
         // search other levels for this item because it's not where we thought it was according to getLevel()
         if (Parameters.DEBUG) {
             int ns = nameTable.size();
-            int is = sizeItems();
-            if (ns == is)
+            int is_ = sizeItems();
+            if (ns is is_)
                 return null;
-            throw new RuntimeException("LevelBag inconsistency: " + nameTable.size() + "|" + sizeItems() + " Can not remove missing element: size inconsistency" + oldItem + " from " + this.getClass().getSimpleName());
+            throw new Exception("LevelBag inconsistency: "); // TODO tranclate to D      + nameTable.size() + "|" + sizeItems() + " Can not remove missing element: size inconsistency" + oldItem + " from " + this.getClass().getSimpleName());
         }
         return oldItem;
     }
@@ -309,7 +321,7 @@ class LevelBag(E, K) : Bag!(E, K) {
      */
     private final int getLevel(E item) {
         float fl = item.getPriority() * levels;
-        int level = (int) Math.ceil(fl) - 1;
+        int level = cast(int)ceil(fl) - 1;
         if (level < 0) return 0;
         if (level >= levels) return levels-1;
         return level;
@@ -318,11 +330,11 @@ class LevelBag(E, K) : Bag!(E, K) {
     /**
      * Insert an item into the itemTable, and return the overflow
      *
-     * @param newItem The Item to put in
-     * @return null if nothing overflowed, non-null if an overflow Item, which
+     * \param newItem The Item to put in
+     * \return null if nothing overflowed, non-null if an overflow Item, which
      * may be the attempted input item (in which case it was not inserted)
      */
-    @Override public E addItem(final E newItem) {
+    @Override E addItem(E newItem) {
         E oldItem = null;
         int inLevel = getLevel(newItem);
         if (size() >= capacity) {      // the bag will be full after the next 
@@ -338,13 +350,13 @@ class LevelBag(E, K) : Bag!(E, K) {
         }
         ensureLevelExists(inLevel);
         level[inLevel].add(newItem);        // FIFO
-        nameTable.put(newItem.name(), newItem);        
+        nameTable[newItem.name()] = newItem;        
         addMass(newItem);
         return oldItem;
     }
 
-    protected final void ensureLevelExists(final int level) {
-        if (this.level[level] == null) {
+    protected final void ensureLevelExists(int level) {
+        if( this.level[level] is null ) {
             this.level[level] = newLevel(level);
         }
     }
@@ -352,17 +364,17 @@ class LevelBag(E, K) : Bag!(E, K) {
     /**
      * Take out the first or last E in a level from the itemTable
      *
-     * @param level The current level
-     * @return The first Item
+     * \param level The current level
+     * \return The first Item
      */
-    private E takeOutFirst(final int level) {
+    private E takeOutFirst(int level) {
         final E selected = this.level[level].removeFirst();
-        if (selected!=null) {
+        if( selected !is null ) {
             nameTable.remove(selected.name());
             removeMass(selected);
         }
         else {
-            throw new RuntimeException("Attempt to remove item from empty level: " + level);
+            throw new Exception(format("Attempt to remove item from empty level: %s", level));
         }
         return selected;
     }
